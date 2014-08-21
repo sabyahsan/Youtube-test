@@ -78,7 +78,7 @@ static int xferinfo(void *p,
   {
 	  if((curtime - myp->lastruntime) >= MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL)
 	  {
-		  printf("YOUTUBEINTERIM;%ld;", (long) gettimeshort());
+		  printf("YOUTUBEINTERIM;%ld;%ld;", (long)metric.htime, (long) gettimeshort());
 		  printf("%.0f;", curtime*1000*1000);
 		  printf("%"PRIu64";", metric.TSnow * 1000);
 		  if(metric.numofstreams > 1)
