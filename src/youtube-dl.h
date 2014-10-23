@@ -29,7 +29,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
-
+//#define DEBUG 1
 #define ITWORKED 600
 #define WERSCREWED 666
 #define BADFORMATS 601 //we didn't find the right format for download.
@@ -40,6 +40,8 @@
 #define CODETROUBLE 606 /*HTTP code couldn't be retrieved*/
 #define ERROR_STALL 607 /* There was a stall */
 #define TOO_FAST 608 /* The test finsihed too fast */
+#define LEN_PLAYOUT_BUFFER 40 /*Length of the playout buffer in seconds*/
+
 
 #define NUMOFSTREAMS 2
 #define STREAM_VIDEO 0
@@ -67,6 +69,10 @@ typedef struct
 	char url[CDNURLLEN];
 	char type[URLTYPELEN];
 	int bitrate;
+/*for the range parameter in the YouTube url*/
+	long range0; /*first byte to be fetched*/
+	long range1; /*last byte to be fetched*/
+	int playing; 
 } videourl;
 
 #define CHARPARSHORT 12
@@ -105,6 +111,7 @@ typedef struct
 	int errorcode;
 	double connectiontime[NUMOFSTREAMS];
 	bool fail_on_stall;
+	int playout_buffer_seconds; 
 } metrics;
 
 enum IPv {IPvSYSTEM, IPv4, IPv6};

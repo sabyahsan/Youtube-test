@@ -13,7 +13,7 @@
 
 struct myprogress {
   int stream;
-  double lastruntime;
+  long lastruntime;
   double lastdlbytes;
   CURL *curl;
   struct {

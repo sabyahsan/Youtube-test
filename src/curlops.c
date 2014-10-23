@@ -22,7 +22,7 @@ extern int maxtime;
 extern enum IPv ip_version;
 
 #define STOP_DOWNLOAD_AFTER_THIS_MANY_BYTES         6000
-#define MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL     1
+#define MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL     1000000
 
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *userdata) {
 	struct myprogress *p = (struct myprogress *)userdata;
@@ -64,15 +64,12 @@ static int xferinfo(void *p,
 {
   struct myprogress *myp = (struct myprogress *)p;
   CURL *curl = myp->curl;
-  double totaltime, starttime, curtime;
-
+  long curtime; double starttime; 
   curl_easy_getinfo(curl, CURLINFO_STARTTRANSFER_TIME, &starttime);
   if(starttime == 0) {
 	  return 0;
   }
-  curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &totaltime);
-  curtime = totaltime - starttime;
-
+  curtime = gettimelong();
   /* if verbose is set then print the status  */
   if(Inst)
   {
@@ -189,6 +186,10 @@ static int my_curl_cleanup(struct myprogress * prog, CURLM * multi_handle, CURL 
 	  	    	}
 	  	    	else
 	  	    		metric.errorcode = http_code;
+			//SA-del
+			double tmp; 
+			curl_easy_getinfo (http_handle[j], CURLINFO_SIZE_DOWNLOAD, &tmp);
+			printf("%d error code: %d, downloaded = %f \n", http_code,tmp );
 	  	    }
 	  	    else
 	  	    	metric.errorcode = CODETROUBLE;
@@ -283,13 +284,87 @@ out:
 	return ret;
 }
 
+/*Adapted from - http://curl.haxx.se/libcurl/c/multi-app.html*/
+int initialize_curl_handle( CURL ** http_handle_ref, int i, videourl * url, struct myprogress * prog, CURLM *multi_handle)
+{
+	char range[50];
+	char url_now[1500];
+	strcpy(url_now, url->url);
+	if(metric.playout_buffer_seconds>0)
+	{
+		printf("STREAM %d ---- bitrate %ld (buffer = %d): range %ld-%ld\n", i, url->bitrate, metric.playout_buffer_seconds, url->range0, url->range1);
+		sprintf(range, "&range=%ld-%ld",url->range0, url->range1);
+		strcat(url_now,range);
+	}
+	CURL * http_handle;
+	//cout<<url_now<<endl;
+	if(*http_handle_ref != NULL)
+	{
+		http_handle = *http_handle_ref;
+		curl_multi_remove_handle(multi_handle,http_handle);
+	//	curl_easy_cleanup(http_handle);
+	}
+	else
+	{
+		//cout<<"initializing myprog for "<<i<<endl;
+		prog->stream = i;
+		prog->lastdlbytes = 0;
+		prog->lastruntime = 0;
+	}
+	http_handle = curl_easy_init();
+	if(http_handle ==NULL)
+	{
+		fprintf(stderr, "curl_easy_init() failed and returned NULL\n");
+		return 0;
+	}
+	*http_handle_ref = http_handle;
+
+
+	/* set options */
+
+	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_URL, url_now),i);
+	/* if redirected, tell libcurl to follow redirection */
+	my_curl_easy_returnhandler(curl_easy_setopt(http_handle , CURLOPT_FOLLOWLOCATION, 1L),i);
+	/* if received 302, follow location  */
+	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_POSTREDIR, 1L),i);	/* if redirected, tell libcurl to follow redirection */
+
+	/* timeout if transaction is not completed in 5 and a half minutes */
+	my_curl_easy_returnhandler(curl_easy_setopt(http_handle , CURLOPT_TIMEOUT, 330),i);
+	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_REFERER, metric.link),i);
+	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_SSL_VERIFYPEER, 0),i);
+	/*setting the progress function*/
+
+	prog->curl = http_handle;
+	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_NOPROGRESS, 0L),i);
+	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_PROGRESSFUNCTION, older_progress),i);
+	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_PROGRESSDATA, prog),i);
+	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_WRITEFUNCTION, write_data),i);
+	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_WRITEDATA, prog),i);
+
+
+		/* add the individual transfers */
+		CURLMcode mret = curl_multi_add_handle(multi_handle, http_handle);
+		if(mret != CURLM_OK)
+		{
+			fprintf(stderr, "curl_multi_add_handle() failed with %d: %s\n",mret, curl_multi_strerror(mret));
+			return 0;
+		}
+	//	cout<<"returning 1"<<endl;
+	return 1;
+
+}
+
 int downloadfiles(videourl url [] )
 {
 	CURLMcode mret;
 
 	CURL *http_handle[NUMOFSTREAMS];
+	memzero(http_handle,sizeof(CURL *)*NUMOFSTREAMS);
 	CURLM *multi_handle;
+	CURLMsg *msg; /* for picking up messages with the transfer status */
+	int msgs_left; /* how many messages are left */
 	int still_running; /* keep number of running handles */
+	int run = metric.numofstreams; 
 	/* init a multi stack */
 	multi_handle = curl_multi_init();
 	if(multi_handle==NULL)
@@ -299,144 +374,185 @@ int downloadfiles(videourl url [] )
 	}
 	struct myprogress * prog= malloc(sizeof(struct myprogress [metric.numofstreams]));
 	metric.stime = gettimelong();
-	for(int i =0; i<metric.numofstreams; i++)
+	while(run)
 	{
-		http_handle[i] = curl_easy_init();
-		if(http_handle[i] == NULL)
+		run=0; 
+	//	printf("Starting for loop %d streams\n", metric.numofstreams);
+	//	fflush(stdout); 
+		for(int i =0; i<metric.numofstreams; i++)
 		{
-			fprintf(stderr, "curl_easy_init() failed and returned NULL\n");
-			return my_curl_cleanup(prog, multi_handle, http_handle, i, CURLERROR);
+			url[i].range0=url[i].range1;
+			if(url[i].range1>0)
+				++url[i].range0;
+			else
+				url[i].playing = 1;
+			if(!url[i].playing)
+			{
+				printf("url %d is not playing: run decremented to %d \n", i, run); 
+				continue;
+			}
+			else
+				++run; 
+			url[i].range1+=url[i].bitrate*metric.playout_buffer_seconds;
+#ifdef DEBUG
+			printf("Getting next chunk for stream %d with range : %ld - %ld\n", i, url[i].range0, url[i].range1);
+#endif
+			if(!initialize_curl_handle(http_handle+i, i,url+i,prog+i, multi_handle))
+				my_curl_cleanup(prog, multi_handle, http_handle, i, CURLERROR);
 		}
+		if(run==0)
+			break; 
+		/* we start some action by calling perform right away */
+		mret = curl_multi_perform(multi_handle, &still_running);
+		while (mret ==CURLM_CALL_MULTI_PERFORM)
+			mret = curl_multi_perform(multi_handle, &still_running);
 
-		set_ip_version(http_handle[i], ip_version);
-		/* set options */
-		my_curl_easy_returnhandler(curl_easy_setopt(http_handle[i], CURLOPT_URL, url[i].url),i);
-		/* if redirected, tell libcurl to follow redirection */
-		my_curl_easy_returnhandler(curl_easy_setopt(http_handle[i] , CURLOPT_FOLLOWLOCATION, 1L),i);
-		/* if received 302, follow location  */
-		my_curl_easy_returnhandler(curl_easy_setopt(http_handle[i], CURLOPT_POSTREDIR, 1L),i);	/* if redirected, tell libcurl to follow redirection */
-		/* timeout if transaction is not completed in 5 and a half minutes */
-		my_curl_easy_returnhandler(curl_easy_setopt(http_handle[i] , CURLOPT_TIMEOUT, 330),i);
-		my_curl_easy_returnhandler(curl_easy_setopt(http_handle[i] , CURLOPT_REFERER, metric.link),i);
-		my_curl_easy_returnhandler(curl_easy_setopt(http_handle[i], CURLOPT_SSL_VERIFYPEER, 0),i);
-
-		/*setting the progress function*/
-		prog[i].lastdlbytes = 0;
-		prog[i].lastruntime = 0;
-		prog[i].curl = http_handle[i];
-		prog[i].stream = i;
-		prog[i].init = false;
-		my_curl_easy_returnhandler(curl_easy_setopt(http_handle[i], CURLOPT_NOPROGRESS, 0L),i);
-		my_curl_easy_returnhandler(curl_easy_setopt(http_handle[i], CURLOPT_PROGRESSFUNCTION, older_progress),i);
-		my_curl_easy_returnhandler(curl_easy_setopt(http_handle[i], CURLOPT_PROGRESSDATA, &prog[i]),i);
-		my_curl_easy_returnhandler(curl_easy_setopt(http_handle[i], CURLOPT_WRITEFUNCTION, write_data),i);
-		my_curl_easy_returnhandler(curl_easy_setopt(http_handle[i], CURLOPT_WRITEDATA, &prog[i]),i);
-
-		/* add the individual transfers */
-		mret = curl_multi_add_handle(multi_handle, http_handle[i]);
 		if(mret != CURLM_OK)
 		{
-			fprintf(stderr, "curl_multi_add_handle() failed with %d: %s\n",mret, curl_multi_strerror(mret));
-			return my_curl_cleanup(prog, multi_handle, http_handle, i,CURLERROR);
+			fprintf(stderr, "curl_multi_perform() failed with %d: %s\n", mret, curl_multi_strerror(mret));
+			return my_curl_cleanup(prog, multi_handle, http_handle, metric.numofstreams, CURLERROR);
 		}
-	}
 
-	/* we start some action by calling perform right away */
-	mret = curl_multi_perform(multi_handle, &still_running);
-	while (mret ==CURLM_CALL_MULTI_PERFORM)
-		mret = curl_multi_perform(multi_handle, &still_running);
+		do {
+			struct timeval timeout;
+			int rc; /* select() return code */
 
-	if(mret != CURLM_OK)
-	{
-		fprintf(stderr, "curl_multi_perform() failed with %d: %s\n", mret, curl_multi_strerror(mret));
-		return my_curl_cleanup(prog, multi_handle, http_handle, metric.numofstreams, CURLERROR);
-	}
+			fd_set fdread;
+			fd_set fdwrite;
+			fd_set fdexcep;
+			int maxfd = -1;
 
-	do {
-		struct timeval timeout;
-		int rc; /* select() return code */
+			long curl_timeo = -1;
 
-		fd_set fdread;
-		fd_set fdwrite;
-		fd_set fdexcep;
-		int maxfd = -1;
+			FD_ZERO(&fdread);
+			FD_ZERO(&fdwrite);
+			FD_ZERO(&fdexcep);
 
-		long curl_timeo = -1;
+			/* set a suitable timeout to play around with */
+			timeout.tv_sec = 1;
+			timeout.tv_usec = 0;
 
-		FD_ZERO(&fdread);
-		FD_ZERO(&fdwrite);
-		FD_ZERO(&fdexcep);
+			mret=curl_multi_timeout(multi_handle, &curl_timeo);
+			if(mret==CURLM_OK)
+			{
+				if(curl_timeo >= 0) {
+				  timeout.tv_sec = curl_timeo / 1000;
+				  if(timeout.tv_sec > 1)
+					timeout.tv_sec = 1;
+				  else
+					timeout.tv_usec = (curl_timeo % 1000) * 1000;
+				}
 
-		/* set a suitable timeout to play around with */
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-
-		mret=curl_multi_timeout(multi_handle, &curl_timeo);
-		if(mret==CURLM_OK)
-		{
-			if(curl_timeo >= 0) {
-			  timeout.tv_sec = curl_timeo / 1000;
-			  if(timeout.tv_sec > 1)
-				timeout.tv_sec = 1;
-			  else
-				timeout.tv_usec = (curl_timeo % 1000) * 1000;
+				/* get file descriptors from the transfers */
+				mret = curl_multi_fdset(multi_handle, &fdread, &fdwrite, &fdexcep, &maxfd);
 			}
-
-			/* get file descriptors from the transfers */
-			mret = curl_multi_fdset(multi_handle, &fdread, &fdwrite, &fdexcep, &maxfd);
-		}
-		if(mret!=CURLM_OK)
-		{
-			  fprintf(stderr, "curl_multi_timeout()/curl_multi_fdset failed with %d: %s\n", mret, curl_multi_strerror(mret));
+			if(mret!=CURLM_OK)
+			{
+				fprintf(stderr, "curl_multi_timeout()/curl_multi_fdset failed with %d: %s\n", mret, curl_multi_strerror(mret));
 				return my_curl_cleanup(prog, multi_handle, http_handle, metric.numofstreams, CURLERROR);
-		}
-		/* In a real-world program you OF COURSE check the return code of the
-		   function calls.  On success, the value of maxfd is guaranteed to be
-		   greater or equal than -1.  We call select(maxfd + 1, ...), specially in
-		   case of (maxfd == -1), we call select(0, ...), which is basically equal
-		   to sleep. */
+			}
+			/* In a real-world program you OF COURSE check the return code of the
+			   function calls.  On success, the value of maxfd is guaranteed to be
+			   greater or equal than -1.  We call select(maxfd + 1, ...), specially in
+		   	case of (maxfd == -1), we call select(0, ...), which is basically equal
+		   	to sleep. */
 
-		rc = select(maxfd+1, &fdread, &fdwrite, &fdexcep, &timeout);
+			rc = select(maxfd+1, &fdread, &fdwrite, &fdexcep, &timeout);
 
-		switch(rc) {
-		case -1:
-		  fprintf(stderr, "select error occured: %d , %s\n", errno, strerror(errno));
-		  return my_curl_cleanup(prog, multi_handle, http_handle, metric.numofstreams, CURLERROR);
+			switch(rc) {
+			case -1:
+			  fprintf(stderr, "select error occured: %d , %s\n", errno, strerror(errno));
+			  return my_curl_cleanup(prog, multi_handle, http_handle, metric.numofstreams, CURLERROR);
 
-		  break;
-		case 0:
-		default:
-		  /* timeout or readable/writable sockets */
-			mret = curl_multi_perform(multi_handle, &still_running);
-			while (mret ==CURLM_CALL_MULTI_PERFORM)
+			  break;
+			case 0:
+			default:
+			  /* timeout or readable/writable sockets */
+				mret = curl_multi_perform(multi_handle, &still_running);
+				while (mret ==CURLM_CALL_MULTI_PERFORM)
 				mret = curl_multi_perform(multi_handle, &still_running);
 
-			if(mret != CURLM_OK)
-			{
-				fprintf(stderr, "curl_multi_perform() failed with %d: %s\n", mret, curl_multi_strerror(mret));
-				return my_curl_cleanup(prog, multi_handle, http_handle, metric.numofstreams, CURLERROR);
+				if(mret != CURLM_OK)
+				{
+					fprintf(stderr, "curl_multi_perform() failed with %d: %s\n", mret, curl_multi_strerror(mret));
+					return my_curl_cleanup(prog, multi_handle, http_handle, metric.numofstreams, CURLERROR);
+				}
+			  break;
 			}
-		  break;
-		}
 
-		if(metric.initialprebuftime >= 0) {
-			long long now = gettimelong();
-			long long playback_start_time = metric.stime + metric.initialprebuftime;
-			if((now - playback_start_time) / 1000000 > maxtime)
-			/*the test has been running for too long
-			terminate the session. */
-			{
-				metric.errorcode = MAXTESTRUNTIME;
+			if(metric.initialprebuftime >= 0) {
+				long long now = gettimelong();
+				long long playback_start_time = metric.stime + metric.initialprebuftime;
+				if((now - playback_start_time) / 1000000 > maxtime)
+				/*the test has been running for too long
+				terminate the session. */
+					metric.errorcode = MAXTESTRUNTIME;
 			}
-		}
 
-		checkstall(false);
 
-		if(metric.errorcode) {
-			break;
-		}
-	} while(still_running);
+			while ((msg = curl_multi_info_read(multi_handle, &msgs_left))) 
+			{
+				if (msg->msg == CURLMSG_DONE) {
+				  int idx, found = 0;
 
+				  /* Find out which handle this message is about */
+				  for (idx=0; idx<metric.numofstreams; idx++) {
+					found = (msg->easy_handle == http_handle[idx]);
+					if(found)
+					  break;
+				  }
+				  double bytesnow=0, timenow=0;
+
+				  switch (idx) {
+				  case STREAM_VIDEO:
+					if( curl_easy_getinfo(http_handle[idx], CURLINFO_SIZE_DOWNLOAD, &bytesnow)!= CURLE_OK)
+					{
+						url[idx].playing = 0;
+					}
+					else
+					{
+						metric.totalbytes[idx]+=bytesnow;
+						if(bytesnow<url[idx].range1-url[idx].range0)
+						{
+							url[idx].playing=0;
+							printf("Full HTTP transfer completed for video with status %d\n", msg->data.result);
+						}
+					}
+					if( curl_easy_getinfo(http_handle[idx], CURLINFO_TOTAL_TIME, &timenow)== CURLE_OK)
+						metric.downloadtime[idx]+=timenow;
+					//printf("HTTP transfer completed for video chunk with status %d\n", msg->data.result);
+					//	  	    if( curl_easy_getinfo(http_handle[j], CURLINFO_TOTAL_TIME, &metric.downloadtime[j])!= CURLE_OK)
+					//	  	    	metric.downloadtime[j]=-1;
+					break;
+				  case STREAM_AUDIO:
+					//printf("HTTP transfer completed for audio with status %d\n", msg->data.result);
+					if( curl_easy_getinfo(http_handle[idx], CURLINFO_SIZE_DOWNLOAD, &bytesnow)!= CURLE_OK)
+					{
+						url[idx].playing = 0;
+					}
+					else
+					{
+						metric.totalbytes[idx]+=bytesnow;
+						if(bytesnow<url[idx].range1-url[idx].range0)
+						{
+							url[idx].playing=0;
+							printf("Full HTTP transfer completed for audio with status %d\n", msg->data.result);
+						}
+					}
+					if( curl_easy_getinfo(http_handle[idx], CURLINFO_TOTAL_TIME, &timenow)== CURLE_OK)
+						metric.downloadtime[idx]+=timenow;
+
+					break;
+				  }
+				}
+			}
+			if(metric.errorcode) 
+				break;
+			/*checkstall should not be called here, more than one TS might be received during one session, it is important that 
+			  we check the status of the playout buffer as soon as a new frame(TS) is received
+			checkstall(false);*/
+		} while(still_running);
+	}
 	return my_curl_cleanup(prog, multi_handle, http_handle, metric.numofstreams, ITWORKED);
 
 }

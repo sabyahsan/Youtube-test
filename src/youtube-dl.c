@@ -50,6 +50,11 @@ static int check_arguments(int argc, char* argv[], char * youtubelink)
 		{
 			max_bitrate = atoi(argv[++i]) / 8;
 		}
+		else if(strcmp(argv[i], "--range")==0)
+		{
+			/*if the value is 0 the whole file is requested*/
+			metric.playout_buffer_seconds = atoi(argv[++i]);
+		}
 		else if(strcmp(argv[i], "--mintime")==0)
 		{
 			min_test_time = atoi(argv[++i]);
@@ -92,7 +97,7 @@ static void signal_handler(int UNUSED(sig))
 static void mainexit()
 {
 #ifdef DEBUG
-	cout<<"exiting main\n";
+	printf("exiting main\n");
 #endif
 	if(metric.errorcode==0)
 		metric.errorcode = WERSCREWED;
@@ -136,6 +141,8 @@ static void init_metrics(metrics *metric) {
 	metric->ft = NOTSUPPORTED;
 	metric->errorcode=0;
 	metric->fail_on_stall = true;
+	metric->playout_buffer_seconds=LEN_PLAYOUT_BUFFER;
+
 }
 
 static void restart_metrics(metrics *metric) {
@@ -258,10 +265,11 @@ int main(int argc, char* argv[])
 
 	char youtubelink[MAXURLLENGTH]="http://www.youtube.com/watch?v=j8cKdDkkIYY";
 
+	init_metrics(&metric);
+
 	if(!check_arguments(argc, argv, youtubelink))
 		exit(EXIT_FAILURE);
 
-	init_metrics(&metric);
 	strncpy(metric.link, youtubelink, MAXURLLENGTH-1);
 	if(extract_media_urls(youtubelink) < 0) {
 		exit(EXIT_FAILURE);

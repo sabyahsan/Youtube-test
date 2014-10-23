@@ -39,7 +39,7 @@ wdr4900_FFMPEG_CPU := --arch=ppc --cpu=e500v2
 
 UNSUPPORTED_UNITS := cz alix BT_HomeHub_3_0a
 
-BASE_MAKEFILE ?= /opt/samknows/build_system/Makefile
+BASE_MAKEFILE ?= /home/sahsan/sk-probe/build_system/Makefile
 include $(BASE_MAKEFILE)
 
 build/curl-$(LIBCURL_VERSION).tar.bz2:

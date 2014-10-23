@@ -423,9 +423,8 @@ static int split_urls(char * data, videourl url_list[], bool adaptive)
 
 		extract_formattype(split , url_list[index].type);
 
-		if(adaptive) {
+		if(adaptive) 
 			extract_bitrate(split, &url_list[index].bitrate);
-		}
 
 		if(!copy_to_videourl(split,url_list+index))
 		{

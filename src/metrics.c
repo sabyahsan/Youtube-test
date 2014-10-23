@@ -21,6 +21,8 @@ uint minbuffer = MIN_PREBUFFER;
 void checkstall(bool end)
 {
 	long long timenow = gettimelong();
+	/*If more than one stream is being downloaded, they need to be synchronized
+	  metric.TSnow should be the smallest TS in the list, since it represents the highest TS that can be played out.*/
 	if(metric.numofstreams > 1)
 	{
 		metric.TSnow= metric.TSlist[0];
@@ -37,7 +39,6 @@ void checkstall(bool end)
 		metric.Tmin0= timenow; /*time at which prebuffering started*/
 		metric.TS0 = metric.TSnow; /*the earliest timestamp to be played out after prebuffering*/
 	}
-   // cout<<"?"<<timenow<<"\t"<<metric.TSnow<<endl;
 	/* check if there is a stall, reset time values if there is. Tmin is the start of playout.
 	 * if Tmin is -1 this playout has not started so no need to check
 	 * Adding 10ms (10000us) for the encoder and whatnots delay*/
