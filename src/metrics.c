@@ -170,3 +170,30 @@ void printvalues()
 	printf("%.0f;", metric.connectiontime[STREAM_AUDIO] * 1000 * 1000);
 	printf("%d;\n",metric.url[STREAM_AUDIO].bitrate);
 }
+
+
+void printinterim (double bytesnow, double timenow, int idx)
+{
+	long curtime = gettimeshort(); 
+	  printf("YOUTUBEINTERIM;%ld;%ld;", (long)gettimeshort(), (long)metric.htime);
+	  printf("%ld;", (curtime - metric.htime)*1000*1000);
+	  printf("%"PRIu64";", metric.TSnow);
+	  if(metric.numofstreams > 1)
+	  {
+		  if(idx==STREAM_AUDIO)
+			  printf("AUDIO;");
+		  else if(idx==STREAM_VIDEO)
+			  printf("VIDEO;");
+	  }
+	  else
+		  printf("ALL;");
+	  printf("%"PRIu64";", metric.TSlist[idx] * 1000);
+	  printf("%ld;", (long)bytesnow);
+	  printf("%ld;", (long)timenow);
+	  printf("%.0f;", metric.totalbytes[idx]/metric.downloadtime[idx]);
+	  printf("%.0f;", bytesnow/timenow);
+
+	  printf("%d;", metric.numofstalls);
+	  printf("%.0f;", (metric.numofstalls>0 ? (metric.totalstalltime/metric.numofstalls) : 0)); // av stall duration
+	  printf("%.0f\n", metric.totalstalltime);
+}

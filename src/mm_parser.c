@@ -120,3 +120,46 @@ void mm_parser(void *arg) {
 
 	return;
 }
+
+/*If the function returns a negative value, it means there is space in the buffer, otherwise it indicates 
+the over utilization of the buffer in seconds*/
+struct timeval get_curr_playoutbuf_len()
+{
+	struct timeval buffertime; 
+	/*check if playout is stalled for any reason, return full length of buffer if so. */
+	if(metric.Tmin<0)
+	{
+		buffertime.tv_sec=0; 
+		buffertime.tv_usec=0; 
+	}
+	else
+	{
+		long long timenow = gettimelong();
+		double leninusec =  ((((double)(metric.TSnow-metric.TS0)*1000)-(double)(timenow-metric.Tmin)));
+ 		buffertime.tv_sec = leninusec/1000000;
+		buffertime.tv_usec = leninusec - (buffertime.tv_sec*1000000);
+	}
+	return buffertime;
+}
+
+
+struct timeval get_curr_playoutbuf_len_forstream(int i)
+{
+	/*check if playout is stalled for any reason, return full length of buffer if so. */
+	struct timeval buffertime; 
+	/*check if playout is stalled for any reason, return full length of buffer if so. */
+	if(metric.Tmin<0)
+	{
+		buffertime.tv_sec=0; 
+		buffertime.tv_usec=0; 
+	}
+	else
+	{
+		long long timenow = gettimelong();
+		double leninusec =  ((((double)(metric.TSlist[i]-metric.TS0)*1000)-(double)(timenow-metric.Tmin)));
+ 		buffertime.tv_sec = (long)(leninusec/1000000);
+		buffertime.tv_usec = leninusec - (buffertime.tv_sec*1000000);
+	}
+	return buffertime;
+}
+

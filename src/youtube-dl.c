@@ -52,8 +52,10 @@ static int check_arguments(int argc, char* argv[], char * youtubelink)
 		}
 		else if(strcmp(argv[i], "--range")==0)
 		{
-			/*if the value is 0 the whole file is requested*/
+			/*not specifying any value requests whole file. Otherwise value must be greater than 5 seconds*/
 			metric.playout_buffer_seconds = atoi(argv[++i]);
+			if(metric.playout_buffer_seconds<5)
+				metric.playout_buffer_seconds  = 5;
 		}
 		else if(strcmp(argv[i], "--mintime")==0)
 		{
@@ -141,7 +143,8 @@ static void init_metrics(metrics *metric) {
 	metric->ft = NOTSUPPORTED;
 	metric->errorcode=0;
 	metric->fail_on_stall = true;
-	metric->playout_buffer_seconds=LEN_PLAYOUT_BUFFER;
+	/*if this value is set to 0, the whole file is requested. */
+	metric->playout_buffer_seconds=0;
 
 }
 

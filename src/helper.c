@@ -89,52 +89,18 @@ void printhelp(char * name)
 	printf("%s <optional-parameters>\n", name);
 	printf("\n");
 	printf("Optional parameters\n");
+	printf("\t<url> => URL of the YouTube video\n");
 	printf("\t--nodownload => Only get the video information, actual video is not downloaded\n");
 	printf("\n");
 	printf("\t--verbose => Print instantaneous metric values when downloading video\n\t\tHas no effect if --nodownload is used\n");
 	printf("\n");
-	printf("\t--flv => Download the default FLV version even if other formats are available\n");
-
-	printf("\nThe output contains some information about the test and also various kinds of records that can be identified by the first column of the record"
-			"which can be 1, 2, 3 etc.. The fields are given below\n\n");
-	printf("Type: 1 or 0 ; printed before downloading the video. If the video URLs were extracted successfully it is 1 else 0\n");
-	printf("1\turl\tcategory\tduration\tviews\tlikes\tdislikes\tformatlist\tadaptiveavailable\ttitle\tuploaddate\n\n");
-
-	printf("Type: 2 prints the final metrics for the downloaded video\n");
-	printf("2\tDownloadTime\tNumberOfStalls\tAverageStallDuration\tTotalStallTime\tAveThroughput\tVideoRate\tAudioRate\tDuration\tInitialPrebufferingtime(us)\t"
-			"TotalMediaRate\tTotalBytes\tMaxMediaRate\n\n");
-
-	printf("Type: 3 prints some instantaneous metrics every second ONLY if --verbose is used \n");
-	printf("3;Timenow;LastTSreceived;PercentageOfVideoDownloaded;TotalbytesDownloaded;TotalBytestoDownload;InstantenousThrouput;"
-			"AverageThroughput;AverageMediaRate;NumberofStalls;AverageStallDuration;TotalStallTime\n\n");
-
-	printf("Type: 6 prints the instantaneous mediarate \n");
-	printf("6\tMediarate(kbps)\tTimestampNow(microseconds)\tCumulativeMediarate(kbps)\n\n");
-
-	printf("Type: 12 prints the stall information for each stall (Times in milliseconds) \n");
-	printf("12\tStall-starttime(videoplayout)\tStallDuration(msec)\n\n");
-
-	printf("Type: 4 prints the TCP stats of video download \n");
-	printf("4\ttcp_info.tcpi_last_data_sent\t\
-		tcp_info.tcpi_last_data_recv\t\
-		tcp_info.tcpi_snd_cwnd\t\
-		tcp_info.tcpi_snd_ssthresh\t\
-		tcp_info.tcpi_rcv_ssthresh\t\
-		tcp_info.tcpi_rtt\t\
-		tcp_info.tcpi_rttvar\t\
-		tcp_info.tcpi_unacked\t\
-		tcp_info.tcpi_sacked\t\
-		tcp_info.tcpi_lost\t\
-		tcp_info.tcpi_retrans\t\
-		tcp_info.tcpi_fackets\n"
-	   );
-
-
-	printf("When the --getsizes option is used the sizes are printed out one line for each format as follows  \n");
-	printf("filesize\titag\tfilesize(bytes)\tcdnip\n\n");
-
-	printf("DO NOT ATTEMPT TO CHANGE configyt IF YOU DON't KNOW WHAT YOU ARE DOING.\n");
+	printf("\t--range <x>=> The length of the playout buffer in seconds. If no value is given whole file is downloaded\n");
+	printf("\t\t otherwise only x worth of video is buffered at any time. Value of x must be greater than 5, smaller values\n\t\t default to 5 automatically\n"); 
+	printf("\n");
+	printf("\t--onebitrate => when used the client does not switch to lower bit rate when a stall occurs\n");
+	printf("\n");
 	printf("RUN WITHOUT ARGUMENTS FOR TESTING.\n");
+	exit(0); 
 
 }
 

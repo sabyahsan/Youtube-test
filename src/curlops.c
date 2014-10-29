@@ -22,7 +22,7 @@ extern int maxtime;
 extern enum IPv ip_version;
 
 #define STOP_DOWNLOAD_AFTER_THIS_MANY_BYTES         6000
-#define MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL     1000000
+#define MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL     1
 
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *userdata) {
 	struct myprogress *p = (struct myprogress *)userdata;
@@ -69,15 +69,15 @@ static int xferinfo(void *p,
   if(starttime == 0) {
 	  return 0;
   }
-  curtime = gettimelong();
+  curtime = gettimeshort();
   /* if verbose is set then print the status  */
   if(Inst)
   {
 	  if((curtime - myp->lastruntime) >= MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL)
 	  {
 		  printf("YOUTUBEINTERIM;%ld;%ld;", (long)gettimeshort(), (long)metric.htime);
-		  printf("%.0f;", curtime*1000*1000);
-		  printf("%"PRIu64";", metric.TSnow * 1000);
+		  printf("%ld;", (curtime - metric.htime));
+		  printf("%"PRIu64";", metric.TSnow / 1000);
 		  if(metric.numofstreams > 1)
 		  {
 			  if(myp->stream==STREAM_AUDIO)
@@ -292,7 +292,7 @@ int initialize_curl_handle( CURL ** http_handle_ref, int i, videourl * url, stru
 	strcpy(url_now, url->url);
 	if(metric.playout_buffer_seconds>0)
 	{
-		printf("STREAM %d ---- bitrate %ld (buffer = %d): range %ld-%ld\n", i, url->bitrate, metric.playout_buffer_seconds, url->range0, url->range1);
+//		printf("STREAM %d ---- bitrate %ld (buffer = %d): range %ld-%ld\n", i, url->bitrate, metric.playout_buffer_seconds, url->range0, url->range1);
 		sprintf(range, "&range=%ld-%ld",url->range0, url->range1);
 		strcat(url_now,range);
 	}
@@ -379,6 +379,24 @@ int downloadfiles(videourl url [] )
 		run=0; 
 	//	printf("Starting for loop %d streams\n", metric.numofstreams);
 	//	fflush(stdout); 
+		/*Previous transfers have finished, figure out if we have enough space in the buffer to download 
+		  more or should we wait while the buffer empties */
+		struct timeval timetowait;
+		/*Get the length of the current buffer*/
+		timetowait = get_curr_playoutbuf_len();
+		/*Adjust timetowait based on the length of the playout buffer, we don't care about usecs*/
+		if(timetowait.tv_sec>metric.playout_buffer_seconds)
+		{
+			timetowait.tv_sec = timetowait.tv_sec-metric.playout_buffer_seconds;
+#ifdef DEBUG
+			printf("Time to wait: %d seconds. Sleeping at %ld....", timetowait.tv_sec, gettimeshort());
+#endif
+			select(0, NULL, NULL, NULL, &timetowait);
+#ifdef DEBUG
+			printf("Awake %ld\n", gettimeshort());
+#endif
+		}
+
 		for(int i =0; i<metric.numofstreams; i++)
 		{
 			url[i].range0=url[i].range1;
@@ -388,12 +406,16 @@ int downloadfiles(videourl url [] )
 				url[i].playing = 1;
 			if(!url[i].playing)
 			{
-				printf("url %d is not playing: run decremented to %d \n", i, run); 
+//				printf("url %d is not playing: run decremented to %d \n", i, run); 
 				continue;
 			}
 			else
-				++run; 
-			url[i].range1+=url[i].bitrate*metric.playout_buffer_seconds;
+				++run;
+			/*Time to download more, check separately for each stream to decide how much to download. */ 
+			timetowait = get_curr_playoutbuf_len_forstream(i);
+			if(timetowait.tv_sec>metric.playout_buffer_seconds)
+				continue;
+			url[i].range1+=url[i].bitrate*LEN_CHUNK_FETCH;
 #ifdef DEBUG
 			printf("Getting next chunk for stream %d with range : %ld - %ld\n", i, url[i].range0, url[i].range1);
 #endif
@@ -496,53 +518,33 @@ int downloadfiles(videourl url [] )
 				  int idx, found = 0;
 
 				  /* Find out which handle this message is about */
+				  double bytesnow=0, timenow=0; 
 				  for (idx=0; idx<metric.numofstreams; idx++) {
 					found = (msg->easy_handle == http_handle[idx]);
 					if(found)
-					  break;
-				  }
-				  double bytesnow=0, timenow=0;
-
-				  switch (idx) {
-				  case STREAM_VIDEO:
-					if( curl_easy_getinfo(http_handle[idx], CURLINFO_SIZE_DOWNLOAD, &bytesnow)!= CURLE_OK)
 					{
-						url[idx].playing = 0;
-					}
-					else
-					{
-						metric.totalbytes[idx]+=bytesnow;
-						if(bytesnow<url[idx].range1-url[idx].range0)
+						if( curl_easy_getinfo(http_handle[idx], CURLINFO_SIZE_DOWNLOAD, &bytesnow)!= CURLE_OK)
 						{
-							url[idx].playing=0;
-							printf("Full HTTP transfer completed for video with status %d\n", msg->data.result);
+							metric.totalbytes[idx]+=bytesnow;
+							url[idx].playing = 0;
 						}
-					}
-					if( curl_easy_getinfo(http_handle[idx], CURLINFO_TOTAL_TIME, &timenow)== CURLE_OK)
-						metric.downloadtime[idx]+=timenow;
-					//printf("HTTP transfer completed for video chunk with status %d\n", msg->data.result);
-					//	  	    if( curl_easy_getinfo(http_handle[j], CURLINFO_TOTAL_TIME, &metric.downloadtime[j])!= CURLE_OK)
-					//	  	    	metric.downloadtime[j]=-1;
-					break;
-				  case STREAM_AUDIO:
-					//printf("HTTP transfer completed for audio with status %d\n", msg->data.result);
-					if( curl_easy_getinfo(http_handle[idx], CURLINFO_SIZE_DOWNLOAD, &bytesnow)!= CURLE_OK)
-					{
-						url[idx].playing = 0;
-					}
-					else
-					{
-						metric.totalbytes[idx]+=bytesnow;
-						if(bytesnow<url[idx].range1-url[idx].range0)
+						else
 						{
-							url[idx].playing=0;
-							printf("Full HTTP transfer completed for audio with status %d\n", msg->data.result);
+							metric.totalbytes[idx]+=bytesnow;
+							if(bytesnow<url[idx].range1-url[idx].range0)
+							{
+								url[idx].playing=0;
+#ifdef DEBUG
+								printf("Full HTTP transfer completed for stream %d  with status %d\n", idx, msg->data.result);
+#endif
+							}
 						}
-					}
-					if( curl_easy_getinfo(http_handle[idx], CURLINFO_TOTAL_TIME, &timenow)== CURLE_OK)
-						metric.downloadtime[idx]+=timenow;
+						if( curl_easy_getinfo(http_handle[idx], CURLINFO_TOTAL_TIME, &timenow)== CURLE_OK)
+							metric.downloadtime[idx]+=timenow;
+						printinterim(bytesnow, timenow, idx); 
 
-					break;
+						break;
+					}
 				  }
 				}
 			}

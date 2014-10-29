@@ -41,6 +41,7 @@
 #define ERROR_STALL 607 /* There was a stall */
 #define TOO_FAST 608 /* The test finsihed too fast */
 #define LEN_PLAYOUT_BUFFER 40 /*Length of the playout buffer in seconds*/
+#define LEN_CHUNK_FETCH 1 /*Length to be requested to refill buffer*/
 
 
 #define NUMOFSTREAMS 2
