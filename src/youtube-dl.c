@@ -137,7 +137,7 @@ static void init_metrics(metrics *metric) {
 	memzero(metric, sizeof(*metric));
 	metric->Tmin=-1;
 	metric->T0 = -1;
-	metric->htime = gettimeshort();
+	metric->htime = gettimelong();
 	metric->Tmin0 = -1;
 	metric->initialprebuftime = -1;
 	metric->ft = NOTSUPPORTED;
@@ -152,6 +152,7 @@ static void restart_metrics(metrics *metric) {
 	metric->numofstalls = 0;
 	metric->totalstalltime = 0;
 	metric->initialprebuftime = -1;
+	metric->htime = gettimelong();
 	metric->TSnow = 0;
 	memset(metric->TSlist, 0, sizeof(metric->TSlist));
 	metric->TS0 = 0;
@@ -275,6 +276,7 @@ int main(int argc, char* argv[])
 
 	strncpy(metric.link, youtubelink, MAXURLLENGTH-1);
 	if(extract_media_urls(youtubelink) < 0) {
+		metric.errorcode=PARSERROR;
 		exit(EXIT_FAILURE);
 	}
 

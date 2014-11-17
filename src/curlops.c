@@ -85,7 +85,7 @@ static int xferinfo(void *p,
           if(((curtime - myp->lastruntime) >= MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL) || (dlnow==dltotal && myp->lastdlbytes!=dlnow && dlnow!=0))
           {
 		  long long timenow = gettimelong(); 
-                  printf("YOUTUBEINTERIM;%ld;%ld;", (long)metric.htime,(long)gettimeshort());
+                  printf("YOUTUBEINTERIM;%ld;%ld;", (long)metric.htime/1000000,(long)gettimeshort());
                   printf("%ld;", (long)(timenow- metric.stime));
                   printf("%"PRIu64";", metric.TSnow * 1000);
                   if(metric.numofstreams > 1)
@@ -196,7 +196,7 @@ static int my_curl_cleanup(struct myprogress * prog, CURLM * multi_handle, CURL 
 		    else
 			metric.downloadrate[j]=-1; 
 
- 		    if(metric.url[j].playing)
+ 		    if(metric.url[j].playing && metric.errorcode==0)
 	  	    if( curl_easy_getinfo (http_handle[j], CURLINFO_RESPONSE_CODE, &http_code)== CURLE_OK)
 	  	    {
 	  	    	if(http_code==200)
@@ -217,7 +217,8 @@ static int my_curl_cleanup(struct myprogress * prog, CURLM * multi_handle, CURL 
 	}
 	curl_multi_cleanup(multi_handle);
 	free(prog);
-	if(metric.errorcode==0 || metric.errorcode==MAXTESTRUNTIME)
+//	if(metric.errorcode==0 || metric.errorcode==MAXTESTRUNTIME)
+	if(metric.errorcode==0)
 		metric.errorcode=errorcode;
 	return metric.errorcode;
 }
@@ -552,13 +553,7 @@ int downloadfiles(videourl url [] )
 								url[idx].playing=0;
 							}
 						}
-/*						if( curl_easy_getinfo(http_handle[idx], CURLINFO_SPEED_DOWNLOAD, &dlspeed)== CURLE_OK)
-						{
-							printinterim(bytesnow, dlspeed, idx);
-						}
-						else
-							metric.errorcode=CURLERROR_GETINFO;
-*/						break;
+						break;
 					}
 				  }
 				}
@@ -581,7 +576,6 @@ int downloadfiles(videourl url [] )
 			checkstall(false);*/
 		} while(still_running);
 	}
-	printf("it worked\n");
 	return my_curl_cleanup(prog, multi_handle, http_handle, metric.numofstreams, ITWORKED, url);
 
 }

@@ -39,6 +39,7 @@
 #define CODETROUBLE 606 /*HTTP code couldn't be retrieved*/
 #define ERROR_STALL 607 /* There was a stall */
 #define TOO_FAST 608 /* The test finsihed too fast */
+#define PARSERROR 609 /*There was an error with the initial HTTP response*/
 #define CURLERROR 610
 #define CURLERROR_GETINFO 611
 
@@ -94,7 +95,7 @@ typedef struct
 	filetype ft;
 	int numofstreams;
 	char link[MAXURLLENGTH];
-	time_t htime; /*unix timestamp when test began*/
+	long long htime; /*unix timestamp when test began*/
 	long long stime; /*unix timestamp in microseconds, when media download began*/
 	long long etime;/*unix timestamp in microseconds, when test ended*/
 	//char url[CDNURLLEN];

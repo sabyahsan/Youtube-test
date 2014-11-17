@@ -74,7 +74,7 @@ void checkstall(bool end)
 			}
 			else
 			{
-				printf("youtubeevent12;%ld;%ld;%" PRIu64 ";%.3f\n",(long)gettimeshort(),(long)metric.htime, metric.TS0, (double)(metric.Tmin-metric.Tmin0)/1000);
+				printf("youtubeevent12;%ld;%ld;%" PRIu64 ";%.3f\n",(long)gettimeshort(),(long)metric.htime/1000000, metric.TS0, (double)(metric.Tmin-metric.Tmin0)/1000);
 				++metric.numofstalls;
 				metric.totalstalltime+=(double)(metric.Tmin-metric.Tmin0);
 			}
@@ -93,13 +93,13 @@ void printvalues()
 	double mtotalrate=metric.downloadrate[STREAM_VIDEO] + metric.downloadrate[STREAM_AUDIO];
 
 	const char *result;
-	if(metric.errorcode == ITWORKED) {
+	if(metric.errorcode == ITWORKED || metric.errorcode == MAXTESTRUNTIME) {
 		result = "OK";
 	} else {
 		result = "FAIL";
 	}
 
-	printf("YOUTUBE.2;%ld;%s;", (long)metric.htime,result);
+	printf("YOUTUBE.2;%ld;%s;", (long)metric.htime/1000000,result);
 	char *video_id = strstr(metric.link, "v=") + 2;
 	printf("%s;", video_id);
 	switch(metric.ft)
@@ -169,16 +169,17 @@ void printvalues()
 	printf("%s;", metric.cdnip[STREAM_AUDIO]);
 	printf("%.0f;", metric.connectiontime[STREAM_AUDIO] * 1000 * 1000);
 	printf("%d;",metric.url[STREAM_AUDIO].bitrate);
+	printf("%.0f;",(metric.stime-metric.htime)+metric.initialprebuftime);
 	printf("%d;",metric.playout_buffer_seconds);
 	printf("%d;\n",metric.errorcode);
 }
-
+/*
 
 void printinterim (double bytesnow, double dlspeed, int idx)
 {
 	long long curtime = gettimelong();
 	  printf("YOUTUBEINTERIM;%ld;%ld;", (long)gettimeshort(), (long)metric.htime);
-	  printf("%ld;", (curtime - metric.stime));
+	  printf("%lld;", (curtime - metric.stime));
 	  printf("%"PRIu64";", metric.TSnow*1000);
 	  if(metric.numofstreams > 1)
 	  {
@@ -197,3 +198,4 @@ void printinterim (double bytesnow, double dlspeed, int idx)
 	  printf("%.0f;", (metric.numofstalls>0 ? (metric.totalstalltime/metric.numofstalls) : 0)); // av stall duration
 	  printf("%.0f\n", metric.totalstalltime);
 }
+*/
