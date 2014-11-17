@@ -168,15 +168,17 @@ void printvalues()
 	}
 	printf("%s;", metric.cdnip[STREAM_AUDIO]);
 	printf("%.0f;", metric.connectiontime[STREAM_AUDIO] * 1000 * 1000);
-	printf("%d;\n",metric.url[STREAM_AUDIO].bitrate);
+	printf("%d;",metric.url[STREAM_AUDIO].bitrate);
+	printf("%d;",metric.playout_buffer_seconds);
+	printf("%d;\n",metric.errorcode);
 }
 
 
 void printinterim (double bytesnow, double dlspeed, int idx)
 {
-	long curtime = gettimeshort();
+	long long curtime = gettimelong();
 	  printf("YOUTUBEINTERIM;%ld;%ld;", (long)gettimeshort(), (long)metric.htime);
-	  printf("%ld;", (curtime - metric.htime)*1000*1000);
+	  printf("%ld;", (curtime - metric.stime));
 	  printf("%"PRIu64";", metric.TSnow*1000);
 	  if(metric.numofstreams > 1)
 	  {
@@ -189,8 +191,7 @@ void printinterim (double bytesnow, double dlspeed, int idx)
 		  printf("ALL;");
 	  printf("%"PRIu64";", metric.TSlist[idx] * 1000);
 	  printf("%ld;", (long)bytesnow);
-	  printf("%ld;", (long)((bytesnow/dlspeed)*1000*1000));
-	  printf("%.0f;", metric.totalbytes[idx]/(curtime-metric.htime));
+	  printf("%.0f;", (double)metric.totalbytes[idx]/((double)(curtime-metric.stime)/1000000));
 	  printf("%.0f;", dlspeed);
 	  printf("%d;", metric.numofstalls);
 	  printf("%.0f;", (metric.numofstalls>0 ? (metric.totalstalltime/metric.numofstalls) : 0)); // av stall duration

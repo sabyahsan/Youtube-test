@@ -12,5 +12,6 @@
 
 void checkstall(bool end);
 void printvalues();
+void printinterim (double bytesnow, double dlspeed, int idx);
 
 #endif /* METRICS_H_ */

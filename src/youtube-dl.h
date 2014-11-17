@@ -44,6 +44,7 @@
 
 #define LEN_PLAYOUT_BUFFER 40 /*Length of the playout buffer in seconds*/
 #define LEN_CHUNK_FETCH 1 /*Length to be requested to refill buffer*/
+#define LEN_CHUNK_MINIMUM 5 /*Shortest length of the buffer*/
 
 
 #define NUMOFSTREAMS 2
@@ -94,8 +95,8 @@ typedef struct
 	int numofstreams;
 	char link[MAXURLLENGTH];
 	time_t htime; /*unix timestamp when test began*/
-	long long stime; /*unix timestamp in microseconds*/
-	long long etime;/*unix timestamp in microseconds*/
+	long long stime; /*unix timestamp in microseconds, when media download began*/
+	long long etime;/*unix timestamp in microseconds, when test ended*/
 	//char url[CDNURLLEN];
 	int numofstalls;
 	char cdnip[NUMOFSTREAMS][CHARSTRLENGTH];

@@ -52,10 +52,10 @@ static int check_arguments(int argc, char* argv[], char * youtubelink)
 		}
 		else if(strcmp(argv[i], "--range")==0)
 		{
-			/*not specifying any value requests whole file. Otherwise value must be greater than 5 seconds*/
+			/*not specifying any value requests whole file. Otherwise value must be greater than LEN_CHUNK_MINIMUM seconds*/
 			metric.playout_buffer_seconds = atoi(argv[++i]);
-			if(metric.playout_buffer_seconds<5)
-				metric.playout_buffer_seconds  = 5;
+			if(metric.playout_buffer_seconds<LEN_CHUNK_MINIMUM)
+				metric.playout_buffer_seconds  = LEN_CHUNK_MINIMUM;
 		}
 		else if(strcmp(argv[i], "--mintime")==0)
 		{
