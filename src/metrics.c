@@ -23,15 +23,17 @@ void checkstall(bool end)
 	long long timenow = gettimelong();
 	/*If more than one stream is being downloaded, they need to be synchronized
 	  metric.TSnow should be the smallest TS in the list, since it represents the highest TS that can be played out.*/
-	if(metric.numofstreams > 1)
-	{
+	/*SA 18.11.2014: NUMOFSTREAMS set to 2 for AUDIO and VIDEO. Since mm_parser stores timestamps to TSlist even when both streams are
+	in same file, so the check for metric.numofstreams shouldn't be done.*/
+//	if(metric.numofstreams > 1)
+//	{
 		metric.TSnow= metric.TSlist[0];
 		for(int i=1; i<NUMOFSTREAMS; i++)
 		{
 			if(metric.TSnow>metric.TSlist[i])
 				metric.TSnow=metric.TSlist[i];
 		}
-	}
+//	}
 	if(metric.T0 < 0)
 	{
 		/*initial run, initialize values*/
