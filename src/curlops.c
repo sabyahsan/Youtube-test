@@ -152,7 +152,7 @@ static int update_curl_progress(struct myprogress * prog, CURL *http_handle[], i
 		metric.downloadtime[j]+=downloadtime;
 	}
   	/* Get connection time and CDN IP - Only for the first connect */
-	if(metric.connectiontime==0)
+	if(metric.connectiontime[j]==0)
 	{
 		if( curl_easy_getinfo(http_handle[j], CURLINFO_CONNECT_TIME, &metric.connectiontime[j])!= CURLE_OK)
 		    metric.connectiontime[j]=-1;
@@ -395,7 +395,13 @@ int downloadfiles(videourl url [] )
 		return CURLERROR;
 	}
 	struct myprogress * prog= malloc(sizeof(struct myprogress [metric.numofstreams]));
-	metric.stime = gettimelong();
+	if(metric.stime==0)
+	{
+		metric.stime = gettimelong();
+		metric.startup = metric.stime - metric.htime; 
+	}
+	else 
+		metric.stime = gettimelong();
 	while(run)
 	{
 		run=0; 

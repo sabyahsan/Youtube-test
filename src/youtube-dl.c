@@ -226,6 +226,17 @@ static int download_to_memory(char url[], void *memory) {
 		goto out;
 	}
 
+	if( curl_easy_getinfo(curl, CURLINFO_CONNECT_TIME, &metric.firstconnectiontime)!= CURLE_OK)
+		metric.firstconnectiontime = -1;
+        else {
+		double lookup_time; 
+        	if( curl_easy_getinfo(curl, CURLINFO_NAMELOOKUP_TIME, &lookup_time)!= CURLE_OK) {
+                	metric.firstconnectiontime=-1;
+                } else {
+                	metric.firstconnectiontime -= lookup_time;
+                }
+        }
+
 out:
 	if(curl) curl_easy_cleanup(curl);
 	return ret;
@@ -242,6 +253,7 @@ static int extract_media_urls(char youtubelink[]) {
 	memzero(pagecontent, PAGESIZE*sizeof(char));
 
 	if(download_to_memory(youtubelink, pagecontent) < 0) {
+		metric.errorcode=FIRSTRESPONSERROR;
 		ret = -2;
 		goto out;
 	}
@@ -276,7 +288,6 @@ int main(int argc, char* argv[])
 
 	strncpy(metric.link, youtubelink, MAXURLLENGTH-1);
 	if(extract_media_urls(youtubelink) < 0) {
-		metric.errorcode=PARSERROR;
 		exit(EXIT_FAILURE);
 	}
 

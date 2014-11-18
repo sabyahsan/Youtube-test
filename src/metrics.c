@@ -90,7 +90,7 @@ void checkstall(bool end)
 
 void printvalues()
 {
-	double mtotalrate=metric.downloadrate[STREAM_VIDEO] + metric.downloadrate[STREAM_AUDIO];
+	double mtotalrate=(metric.totalbytes[STREAM_VIDEO] + metric.totalbytes[STREAM_AUDIO])/(metric.etime-metric.stime);
 
 	const char *result;
 	if(metric.errorcode == ITWORKED || metric.errorcode == MAXTESTRUNTIME) {
@@ -99,7 +99,7 @@ void printvalues()
 		result = "FAIL";
 	}
 
-	printf("YOUTUBE.2;%ld;%s;", (long)metric.htime/1000000,result);
+	printf("YOUTUBE.3;%ld;%s;", (long)metric.htime/1000000,result);
 	char *video_id = strstr(metric.link, "v=") + 2;
 	printf("%s;", video_id);
 	switch(metric.ft)
@@ -169,33 +169,8 @@ void printvalues()
 	printf("%s;", metric.cdnip[STREAM_AUDIO]);
 	printf("%.0f;", metric.connectiontime[STREAM_AUDIO] * 1000 * 1000);
 	printf("%d;",metric.url[STREAM_AUDIO].bitrate);
-	printf("%.0f;",(metric.stime-metric.htime)+metric.initialprebuftime);
-	printf("%d;",metric.playout_buffer_seconds);
-	printf("%d;\n",metric.errorcode);
+	printf("%.0f;", metric.firstconnectiontime * 1000 * 1000);
+	printf("%.0f;",metric.startup+metric.initialprebuftime); /*startup delay*/ 
+	printf("%d;",metric.playout_buffer_seconds); /*range*/
+	printf("%d;\n",metric.errorcode); 
 }
-/*
-
-void printinterim (double bytesnow, double dlspeed, int idx)
-{
-	long long curtime = gettimelong();
-	  printf("YOUTUBEINTERIM;%ld;%ld;", (long)gettimeshort(), (long)metric.htime);
-	  printf("%lld;", (curtime - metric.stime));
-	  printf("%"PRIu64";", metric.TSnow*1000);
-	  if(metric.numofstreams > 1)
-	  {
-		  if(idx==STREAM_AUDIO)
-			  printf("AUDIO;");
-		  else if(idx==STREAM_VIDEO)
-			  printf("VIDEO;");
-	  }
-	  else
-		  printf("ALL;");
-	  printf("%"PRIu64";", metric.TSlist[idx] * 1000);
-	  printf("%ld;", (long)bytesnow);
-	  printf("%.0f;", (double)metric.totalbytes[idx]/((double)(curtime-metric.stime)/1000000));
-	  printf("%.0f;", dlspeed);
-	  printf("%d;", metric.numofstalls);
-	  printf("%.0f;", (metric.numofstalls>0 ? (metric.totalstalltime/metric.numofstalls) : 0)); // av stall duration
-	  printf("%.0f\n", metric.totalstalltime);
-}
-*/

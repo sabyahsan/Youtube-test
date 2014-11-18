@@ -42,6 +42,7 @@
 #define PARSERROR 609 /*There was an error with the initial HTTP response*/
 #define CURLERROR 610
 #define CURLERROR_GETINFO 611
+#define FIRSTRESPONSERROR 620
 
 #define LEN_PLAYOUT_BUFFER 40 /*Length of the playout buffer in seconds*/
 #define LEN_CHUNK_FETCH 1 /*Length to be requested to refill buffer*/
@@ -98,6 +99,7 @@ typedef struct
 	long long htime; /*unix timestamp when test began*/
 	long long stime; /*unix timestamp in microseconds, when media download began*/
 	long long etime;/*unix timestamp in microseconds, when test ended*/
+	long long startup; /*time in microseconds, stime-htime for first media download only*/ 
 	//char url[CDNURLLEN];
 	int numofstalls;
 	char cdnip[NUMOFSTREAMS][CHARSTRLENGTH];
@@ -115,6 +117,7 @@ typedef struct
 	double downloadrate[NUMOFSTREAMS];
 	int errorcode;
 	double connectiontime[NUMOFSTREAMS];
+	double firstconnectiontime; 
 	bool fail_on_stall;
 	int playout_buffer_seconds; 
 } metrics;
