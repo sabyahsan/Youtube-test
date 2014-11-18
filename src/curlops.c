@@ -395,13 +395,7 @@ int downloadfiles(videourl url [] )
 		return CURLERROR;
 	}
 	struct myprogress * prog= malloc(sizeof(struct myprogress [metric.numofstreams]));
-	if(metric.stime==0)
-	{
-		metric.stime = gettimelong();
-		metric.startup = metric.stime - metric.htime; 
-	}
-	else 
-		metric.stime = gettimelong();
+	metric.stime = gettimelong();
 	while(run)
 	{
 		run=0; 

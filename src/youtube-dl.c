@@ -236,6 +236,7 @@ static int download_to_memory(char url[], void *memory) {
                 	metric.firstconnectiontime -= lookup_time;
                 }
         }
+	metric.startup = gettimelong() - metric.htime;
 
 out:
 	if(curl) curl_easy_cleanup(curl);
