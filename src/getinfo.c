@@ -183,7 +183,7 @@ static int extract_bitrate(char *data , int *bitrate) {
     }
     else if( reti == REG_NOMATCH )
     {
-    	perror("No match type");
+    	perror("No match type (bitrate)");
         regfree(&regex);
     	return 0;
     }
@@ -215,7 +215,7 @@ static int extract_formattype(char * data , char * type)
     memzero(tmp, sizeof(tmp));
 
     /* Compile regular expression */
-    reti = regcomp(&regex, "type=[^\\+. ;]*", REG_NEWLINE|REG_EXTENDED);
+    reti = regcomp(&regex, "[^a-zA-Z_-]type=[^\\+. ;]*", REG_NEWLINE|REG_EXTENDED);
     if( reti )
     {
     	fprintf(stderr, "Could not compile regex\n");
@@ -232,7 +232,7 @@ static int extract_formattype(char * data , char * type)
     }
     else if( reti == REG_NOMATCH )
     {
-    	perror("No match type");
+    	perror("No match type (type)");
         regfree(&regex);
     	return 0;
     }
