@@ -92,7 +92,7 @@ void checkstall(bool end)
 
 void printvalues()
 {
-	double mtotalrate=(metric.totalbytes[STREAM_VIDEO] + metric.totalbytes[STREAM_AUDIO])/(metric.etime-metric.stime);
+	double mtotalrate=1000000*(metric.totalbytes[STREAM_VIDEO] + metric.totalbytes[STREAM_AUDIO])/(metric.etime-metric.stime);
 
 	const char *result;
 	if(metric.errorcode == ITWORKED || metric.errorcode == MAXTESTRUNTIME) {
