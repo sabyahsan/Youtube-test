@@ -76,7 +76,7 @@ void checkstall(bool end)
 			}
 			else
 			{
-				printf("youtubeevent12;%ld;%ld;%" PRIu64 ";%.3f\n",(long)gettimeshort(),(long)metric.htime/1000000, metric.TS0, (double)(metric.Tmin-metric.Tmin0)/1000);
+				printf("youtubeevent12;%ld;%lld;%" PRIu64 ";%.3f\n",(long)gettimeshort(),metric.htime/1000000, metric.TS0, (double)(metric.Tmin-metric.Tmin0)/1000);
 				++metric.numofstalls;
 				metric.totalstalltime+=(double)(metric.Tmin-metric.Tmin0);
 			}
@@ -92,7 +92,7 @@ void checkstall(bool end)
 
 void printvalues()
 {
-	double mtotalrate=(metric.totalbytes[STREAM_VIDEO] + metric.totalbytes[STREAM_AUDIO])/(metric.etime-metric.stime);
+	double mtotalrate=1000000*(metric.totalbytes[STREAM_VIDEO] + metric.totalbytes[STREAM_AUDIO])/(metric.etime-metric.stime);
 
 	const char *result;
 	if(metric.errorcode == ITWORKED || metric.errorcode == MAXTESTRUNTIME) {
@@ -101,7 +101,7 @@ void printvalues()
 		result = "FAIL";
 	}
 
-	printf("YOUTUBE.3;%ld;%s;", (long)metric.htime/1000000,result);
+	printf("YOUTUBE.3;%lld;%s;", metric.htime/1000000,result);
 	char *video_id = strstr(metric.link, "v=") + 2;
 	printf("%s;", video_id);
 	switch(metric.ft)

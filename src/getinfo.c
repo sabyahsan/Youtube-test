@@ -215,7 +215,7 @@ static int extract_formattype(char * data , char * type)
     memzero(tmp, sizeof(tmp));
 
     /* Compile regular expression */
-    reti = regcomp(&regex, "[^a-zA-Z_-]type=[^\\+. ;]*", REG_NEWLINE|REG_EXTENDED);
+    reti = regcomp(&regex, "((^t)|([^a-zA-Z_-]t))ype=[^\\+. ;]+", REG_NEWLINE|REG_EXTENDED);
     if( reti )
     {
     	fprintf(stderr, "Could not compile regex\n");
