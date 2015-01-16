@@ -268,6 +268,7 @@ long getfilesize(const char url[])
 	error |= curl_easy_setopt(curl_handle, CURLOPT_NOBODY, 1);
 	error |= curl_easy_setopt(curl_handle, CURLOPT_URL, url);
 	error |= curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0);
+	set_ip_version(curl_handle, ip_version);
 
 	if(error) {
 		ret = -2;
@@ -363,6 +364,8 @@ int initialize_curl_handle( CURL ** http_handle_ref, int i, videourl * url, stru
 
 	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_WRITEFUNCTION, write_data),i);
 	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_WRITEDATA, prog),i);
+
+	set_ip_version(http_handle, ip_version);
 
 
 		/* add the individual transfers */
