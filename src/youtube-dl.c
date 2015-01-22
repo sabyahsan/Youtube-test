@@ -317,6 +317,10 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
+		if(metric.url[0].bitrate <= 0 || metric.url[1].bitrate <= 0) {
+			continue;
+		}
+
 		if(strcasestr(metric.url[0].type, "MP4"))
 		   metric.ft = MP4;
 		else if(strcasestr(metric.url[0].type, "webm"))
@@ -373,6 +377,10 @@ int main(int argc, char* argv[])
 			metric.url[0] = metric.no_adap_url[i];
 
 			if(metric.url[0].bitrate > max_bitrate) {
+				continue;
+			}
+
+			if(metric.url[0].bitrate <= 0) {
 				continue;
 			}
 
