@@ -30,19 +30,6 @@
 #include <netinet/tcp.h>
 
 //#define DEBUG 1
-#define ITWORKED 600
-#define WERSCREWED 666
-#define BADFORMATS 601 //we didn't find the right format for download.
-#define MAXDOWNLOADLENGTH 603 /*three minutes of video has been downloaded*/
-#define MAXTESTRUNTIME 604 /*test has been downloading video for the maximum time */
-#define SIGNALHIT 605 /* program received ctrl+c*/
-#define CODETROUBLE 606 /*HTTP code couldn't be retrieved*/
-#define ERROR_STALL 607 /* There was a stall */
-#define TOO_FAST 608 /* The test finsihed too fast */
-#define PARSERROR 609 /*There was an error with the initial HTTP response*/
-#define CURLERROR 610
-#define CURLERROR_GETINFO 611
-#define FIRSTRESPONSERROR 620
 
 #define LEN_PLAYOUT_BUFFER 40 /*Length of the playout buffer in seconds*/
 #define LEN_CHUNK_FETCH 1 /*Length to be requested to refill buffer*/

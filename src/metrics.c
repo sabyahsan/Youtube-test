@@ -9,6 +9,7 @@
 #include "metrics.h"
 #include "helper.h"
 #include "youtube-dl.h"
+#include "exception.h"
 #include <inttypes.h>
 extern metrics metric;
 uint minbuffer = MIN_PREBUFFER;

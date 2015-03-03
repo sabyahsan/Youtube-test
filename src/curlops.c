@@ -12,6 +12,7 @@
 #include "youtube-dl.h"
 #include "coro.h"
 #include "attributes.h"
+#include "exception.h"
 #include <sys/select.h>
 
 //#define SAVEFILE

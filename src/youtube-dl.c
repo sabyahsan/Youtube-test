@@ -17,6 +17,7 @@
 #include "curlops.h"
 #include "getinfo.h"
 #include "attributes.h"
+#include "exception.h"
 #include <libavformat/avformat.h>
 #include <limits.h>
 metrics metric;
