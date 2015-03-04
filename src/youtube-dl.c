@@ -280,6 +280,9 @@ static int extract_media_urls(char youtubelink[]) {
 //	TODO:errorcodes for each stream can be different. Add functionality to override errorcode of 1 over the other.
 
 	find_urls(pagecontent);
+	if(is_exception()) {
+		goto out;
+	}
 
 out:
 	free(pagecontent);
