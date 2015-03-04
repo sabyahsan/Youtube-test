@@ -180,17 +180,17 @@ static size_t write_to_memory(void *ptr, size_t size, size_t nmemb, void *userda
 	return written;
 }
 
-static int download_to_memory(char url[], void *memory) {
+static void download_to_memory(char url[], void *memory) {
 	int ret = 0;
 
 	CURL *curl = curl_easy_init();
 	if(!curl) {
-		ret = -1;
+		create_exception(RUNTIME_ERROR, "Error setting up cURL");
 		goto out;
 	}
 
 	if(set_ip_version(curl, ip_version) < 0) {
-		ret = -2;
+		create_exception(RUNTIME_ERROR, "Error setting up cURL");
 		goto out;
 	}
 
@@ -205,9 +205,11 @@ static int download_to_memory(char url[], void *memory) {
 	/* we want the data to this memory */
 	error |= curl_easy_setopt(curl, CURLOPT_WRITEDATA, memory);
 	error |= curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+	char error_msg[CURL_ERROR_SIZE];
+	error |= curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_msg);
 
 	if(error) {
-		ret = -3;
+		create_exception(RUNTIME_ERROR, "Error setting up cURL");
 		goto out;
 	}
 
@@ -215,15 +217,30 @@ static int download_to_memory(char url[], void *memory) {
 	error = curl_easy_perform(curl);
 
 	/* Check for errors  */
-	if(error != CURLE_OK)
-		fprintf(stderr, "curl_easy_perform() failed with %d: %s\n", error,
-				 curl_easy_strerror(error));
+	if(error != CURLE_OK) {
+		char error_msg_copy[CURL_ERROR_SIZE];
+		strcpy(error_msg_copy, error_msg);
+
+		char *ip_str = "unknown";
+#ifndef CURL_LOWER_7_19
+		curl_easy_getinfo(curl, CURLINFO_PRIMARY_IP, &ip_str);
+#endif
+
+		if(error == CURLE_COULDNT_RESOLVE_HOST) {
+			create_exception(DNS_RESOLUTION_API_ERROR, "curl_easy_perform: %s (IP: %s)", error_msg_copy, ip_str);
+		} else if(error == CURLE_COULDNT_CONNECT) {
+			create_exception(CONNECTION_API_ERROR, "curl_easy_perform: %s (IP: %s)", error_msg_copy, ip_str);
+		} else {
+			create_exception(NETWORK_API_ERROR, "curl_easy_perform: %s (IP: %s)", error_msg_copy, ip_str);
+		}
+		goto out;
+	}
 
 	long http_code;
 	error = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 	if(error || http_code != 200)
 	{
-		ret = -4;
+		create_exception(NETWORK_API_ERROR, "Server returned error %ld", http_code);
 		goto out;
 	}
 
@@ -241,7 +258,7 @@ static int download_to_memory(char url[], void *memory) {
 
 out:
 	if(curl) curl_easy_cleanup(curl);
-	return ret;
+	return;
 }
 
 static int extract_media_urls(char youtubelink[]) {
@@ -249,14 +266,13 @@ static int extract_media_urls(char youtubelink[]) {
 
 	char *pagecontent = malloc(sizeof(char [PAGESIZE]));
 	if(pagecontent == NULL) {
-		ret = -1;
+		create_exception(RUNTIME_ERROR, "malloc: %s", strerror(errno));
 		goto out;
 	}
 	memzero(pagecontent, PAGESIZE*sizeof(char));
 
-	if(download_to_memory(youtubelink, pagecontent) < 0) {
-		metric.errorcode=FIRSTRESPONSERROR;
-		ret = -2;
+	download_to_memory(youtubelink, pagecontent);
+	if(is_exception()) {
 		goto out;
 	}
 
@@ -289,8 +305,9 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 
 	strncpy(metric.link, youtubelink, MAXURLLENGTH-1);
-	if(extract_media_urls(youtubelink) < 0) {
-		exit(EXIT_FAILURE);
+	extract_media_urls(youtubelink);
+	if(is_exception()) {
+		goto out;
 	}
 
 	bool found = false;
@@ -415,6 +432,8 @@ int main(int argc, char* argv[])
 			break;
 		} while(strlen(metric.no_adap_url[++i].url) != 0);
 	}
+
+out:
 
 	if(metric.errorcode == 403) {
 		return 148;
