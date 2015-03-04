@@ -95,6 +95,24 @@ void printvalues()
 {
 	double mtotalrate=1000000*(metric.totalbytes[STREAM_VIDEO] + metric.totalbytes[STREAM_AUDIO])/(metric.etime-metric.stime);
 
+	int max_bitrate = 0;
+	if(metric.adap_videourl[0].url[0] != 0) {
+		max_bitrate = metric.adap_videourl[0].bitrate;
+
+		char *vformat = strstr(metric.adap_videourl[0].type, "video/") + strlen("video/");
+		int i = -1;
+		while(strlen(metric.adap_audiourl[++i].url) != 0) {
+			char *aformat = strstr(metric.adap_audiourl[i].type, "audio/") + strlen("audio/");
+
+			if(strcmp(vformat, aformat) == 0) {
+				max_bitrate += metric.adap_audiourl[i].bitrate;
+				break;
+			}
+		}
+	} else {
+		max_bitrate = metric.no_adap_url[0].bitrate;
+	}
+
 	const char *result;
 	if(metric.errorcode == ITWORKED || metric.errorcode == MAXTESTRUNTIME) {
 		result = "OK";
@@ -175,6 +193,7 @@ void printvalues()
 	printf("%.0f;", metric.firstconnectiontime * 1000 * 1000);
 	printf("%.0f;",metric.startup+metric.initialprebuftime); /*startup delay*/ 
 	printf("%d;",metric.playout_buffer_seconds); /*range*/
+	printf("%d;", max_bitrate);
 	printf("%d;",metric.errorcode);
 	printf("%s\n",exception.msg);
 }
