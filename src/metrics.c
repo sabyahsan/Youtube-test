@@ -175,5 +175,6 @@ void printvalues()
 	printf("%.0f;", metric.firstconnectiontime * 1000 * 1000);
 	printf("%.0f;",metric.startup+metric.initialprebuftime); /*startup delay*/ 
 	printf("%d;",metric.playout_buffer_seconds); /*range*/
-	printf("%d;\n",metric.errorcode); 
+	printf("%d;",metric.errorcode);
+	printf("%s\n",exception.msg);
 }
