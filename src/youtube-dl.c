@@ -315,15 +315,15 @@ int main(int argc, char* argv[])
 
 	bool found = false;
 
-	int i=0;
-	do {
+	int i=-1;
+	while(strlen(metric.adap_videourl[++i].url) != 0) {
 		restart_metrics(&metric);
 
 		metric.url[0] = metric.adap_videourl[i];
 		metric.numofstreams = 1;
 
-		int j = 0;
-		do {
+		int j = -1;
+		while(strlen(metric.adap_audiourl[++j].url) != 0) {
 			char *vformat = strstr(metric.adap_videourl[i].type, "video/") + strlen("video/");
 			char *aformat = strstr(metric.adap_audiourl[j].type, "audio/") + strlen("audio/");
 
@@ -332,7 +332,7 @@ int main(int argc, char* argv[])
 				metric.numofstreams = 2;
 				break;
 			}
-		} while(strlen(metric.adap_audiourl[++j].url) != 0);
+		}
 
 		if(metric.url[0].bitrate + metric.url[1].bitrate > max_bitrate) {
 			continue;
@@ -378,7 +378,7 @@ int main(int argc, char* argv[])
 
 		found = true;
 		break;
-	} while(strlen(metric.adap_videourl[++i].url) != 0);
+	}
 
 	if(!found) {
 		memset(&metric.url[STREAM_AUDIO], 0, sizeof(metric.url[STREAM_AUDIO]));
@@ -391,8 +391,8 @@ int main(int argc, char* argv[])
 
 		metric.numofstreams = 1;
 
-		i=0;
-		do {
+		i=-1;
+		while(strlen(metric.no_adap_url[++i].url) != 0) {
 			restart_metrics(&metric);
 
 			metric.url[0] = metric.no_adap_url[i];
@@ -433,7 +433,7 @@ int main(int argc, char* argv[])
 
 			found = true;
 			break;
-		} while(strlen(metric.no_adap_url[++i].url) != 0);
+		}
 	}
 
 out:
