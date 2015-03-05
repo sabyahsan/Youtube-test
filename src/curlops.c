@@ -197,7 +197,7 @@ static int my_curl_cleanup(struct myprogress * prog, CURLM * multi_handle, CURL 
 		    else
 			metric.downloadrate[j]=-1; 
 
- 		    if(metric.url[j].playing && metric.errorcode==0)
+ 		    if(metric.errorcode==0)
 	  	    if( curl_easy_getinfo (http_handle[j], CURLINFO_RESPONSE_CODE, &http_code)== CURLE_OK)
 	  	    {
 	  	    	if(http_code==200)
