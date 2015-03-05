@@ -396,6 +396,7 @@ int downloadfiles(videourl url [] )
 	if(multi_handle==NULL)
 	{
 		fprintf(stderr, "curl_multi_init() failed and returned NULL\n");
+		create_exception(CURLERROR, "curl_multi_init()");
 		return CURLERROR;
 	}
 	struct myprogress * prog= malloc(sizeof(struct myprogress [metric.numofstreams]));
