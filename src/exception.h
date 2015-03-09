@@ -13,6 +13,7 @@ enum errors {
 	MAXDOWNLOADLENGTH = 603, /*three minutes of video has been downloaded*/
 	MAXTESTRUNTIME = 604, /*test has been downloading video for the maximum time */
 	SIGNALHIT = 605, /* program received ctrl+c*/
+#define SIGNALHIT 605
 	CODETROUBLE = 606, /*HTTP code couldn't be retrieved*/
 	ERROR_STALL = 607, /* There was a stall */
 	TOO_FAST = 608, /* The test finsihed too fast */

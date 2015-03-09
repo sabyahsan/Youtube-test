@@ -29,6 +29,9 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
+#define QUOTE_EXPAND(arg) #arg
+#define QUOTE(arg) QUOTE_EXPAND(arg)
+
 //#define DEBUG 1
 
 #define LEN_PLAYOUT_BUFFER 40 /*Length of the playout buffer in seconds*/

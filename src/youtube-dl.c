@@ -18,6 +18,7 @@
 #include "getinfo.h"
 #include "attributes.h"
 #include "exception.h"
+#include <signal.h>
 #include <libavformat/avformat.h>
 #include <limits.h>
 metrics metric;
@@ -90,6 +91,69 @@ static int check_arguments(int argc, char* argv[], char * youtubelink)
 	return 1;
 }
 
+static const char *const signal_str[] = {
+	[SIGABRT]	= "SIGABRT",
+	[SIGALRM]	= "SIGALRM",
+	[SIGBUS]	= "SIGBUS",
+	[SIGFPE]	= "SIGFPE",
+	[SIGHUP]	= "SIGHUP",
+	[SIGILL]	= "SIGILL",
+	[SIGINT]	= "SIGINT",
+	[SIGIO]	= "SIGIO",
+	[SIGPIPE]	= "SIGPIPE",
+	[SIGPROF]	= "SIGPROF",
+	[SIGPWR]	= "SIGPWR",
+	[SIGQUIT]	= "SIGQUIT",
+	[SIGSEGV]	= "SIGSEGV",
+	[SIGSTKFLT]	= "SIGSTKFLT",
+	[SIGSYS]	= "SIGSYS",
+	[SIGTERM]	= "SIGTERM",
+	[SIGTRAP]	= "SIGTRAP",
+	[SIGUSR1]	= "SIGUSR1",
+	[SIGUSR2]	= "SIGUSR2",
+	[SIGVTALRM]	= "SIGVTALRM",
+	[SIGXCPU]	= "SIGXCPU",
+	[SIGXFSZ]	= "SIGXFSZ"
+};
+
+static void term_signal_handler(int sig)
+{
+	static const char err_output_s[] = "YOUTUBE.4;;FAIL;;;;;;;;;;VIDEO;;;;;;;;;AUDIO;;;;;;;;;;;;;"QUOTE(SIGNALHIT)";Signal ";
+	write(1, err_output_s, sizeof(err_output_s) - 1);
+
+	if(sig < SIGRTMIN) {
+		write(1, signal_str[sig], sizeof(signal_str[sig]) - 1);
+	} else {
+		static const char rtmin[] = "RTMIN";
+		write(1, rtmin, sizeof(rtmin) - 1);
+		if((sig - SIGRTMIN) > 0) {
+			static const char plus_rtmin[] = "+";
+			write(1, plus_rtmin, sizeof(plus_rtmin) - 1);
+
+			char diff = sig - SIGRTMIN;
+			char diff_str[3];
+			size_t diff_str_len;
+			diff_str[0] = 48 + diff/100;
+			diff_str[1] = 48 + (diff - (diff_str[0] - 48)*100)/10;
+			diff_str[2] = 48 + (diff - (diff_str[0] - 48)*100 - (diff_str[1] - 48)*10);
+			diff_str_len = sizeof(diff_str);
+			for(size_t i = 0; i < sizeof(diff_str); ++i) {
+				if(diff_str[i] != 48) {
+					break;
+				}
+				diff_str_len--;
+			}
+
+			write(1, diff_str + sizeof(diff_str) - diff_str_len, diff_str_len);
+		}
+	}
+
+	static const char err_output_e[] = " received\n";
+	write(1, err_output_e, sizeof(err_output_e) - 1);
+
+	_Exit(128 + sig);
+}
+
 static void signal_handler(int UNUSED(sig))
 {
     metric.errorcode = SIGNALHIT;
@@ -121,6 +185,22 @@ static int init_libraries() {
 static int prepare_exit() {
 	if(atexit(mainexit) != 0) {
 		return -1;
+	}
+
+	for(size_t i = 0; i < sizeof(signal_str)/sizeof(*signal_str); ++i) {
+		if(signal_str[i] != NULL) {
+			if(signal(i, term_signal_handler) == SIG_ERR) {
+				return -1;
+			}
+		}
+	}
+
+	for(int i = SIGRTMIN; i <= SIGRTMAX; ++i) {
+		if(signal_str[i] != NULL) {
+			if(signal(i, term_signal_handler) == SIG_ERR) {
+				return -1;
+			}
+		}
 	}
 
 	if(signal(SIGINT, signal_handler) == SIG_ERR) {
