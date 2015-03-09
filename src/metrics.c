@@ -120,7 +120,7 @@ void printvalues()
 		result = "FAIL";
 	}
 
-	printf("YOUTUBE.3;%lld;%s;", metric.htime/1000000,result);
+	printf("YOUTUBE.4;%lld;%s;", metric.htime/1000000,result);
 	char *video_id = strstr(metric.link, "v=") + 2;
 	printf("%s;", video_id);
 	switch(metric.ft)
