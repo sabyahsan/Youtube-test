@@ -181,8 +181,6 @@ static size_t write_to_memory(void *ptr, size_t size, size_t nmemb, void *userda
 }
 
 static void download_to_memory(char url[], void *memory) {
-	int ret = 0;
-
 	CURL *curl = curl_easy_init();
 	if(!curl) {
 		create_exception(RUNTIME_ERROR, "Error setting up cURL");
