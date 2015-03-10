@@ -1,10 +1,12 @@
 VERSION := 1.0
 
+# _Exit is C99, _exit is POSIX... the wnr3500l is not C99 compliant
+wnr3500l_CPPFLAGS := -D_Exit=_exit
 wrt54gl_LDLIBS := -lssl -lcrypto -lz
 
 BINARIES := youtube
 youtube_SOURCES := $(wildcard src/*.c)
-youtube_CPPFLAGS = -D_GNU_SOURCE -DCORO_SJLJ
+youtube_CPPFLAGS = -D_GNU_SOURCE -DCORO_SJLJ $($(UNIT)_CPPFLAGS)
 youtube_CFLAGS := -std=gnu99
 youtube_LDLIBS := -lcurl -lavformat -lavcodec -lavutil $($(UNIT)_LDLIBS)
 
