@@ -31,6 +31,7 @@ youtube_LDFLAGS += -L$(BUILD_PATH)/ffmpeg_install/lib
 FFMPEG_VERSION := 2.2.3
 PRE_RULES += build/ffmpeg-$(FFMPEG_VERSION)/configure
 
+mr3020_FFMPEG_CPU := --arch=mips --cpu=24kc
 wnr3500l_FFMPEG_CPU := --arch=mips --enable-mips32r2 --disable-mipsfpu --enable-mipsdspr1 --disable-mipsdspr2
 wrt160nl_FFMPEG_CPU := --arch=mips --cpu=24kc
 wr741nd_FFMPEG_CPU := --arch=mips --cpu=24kc
