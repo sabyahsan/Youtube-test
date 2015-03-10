@@ -105,7 +105,9 @@ static const char *const signal_str[] = {
 	[SIGPWR]	= "SIGPWR",
 	[SIGQUIT]	= "SIGQUIT",
 	[SIGSEGV]	= "SIGSEGV",
+#ifdef SIGSTKFLT
 	[SIGSTKFLT]	= "SIGSTKFLT",
+#endif
 	[SIGSYS]	= "SIGSYS",
 	[SIGTERM]	= "SIGTERM",
 	[SIGTRAP]	= "SIGTRAP",
