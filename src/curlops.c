@@ -12,6 +12,7 @@
 #include "youtube-dl.h"
 #include "coro.h"
 #include "attributes.h"
+#include "exception.h"
 #include <sys/select.h>
 
 //#define SAVEFILE
@@ -196,7 +197,7 @@ static int my_curl_cleanup(struct myprogress * prog, CURLM * multi_handle, CURL 
 		    else
 			metric.downloadrate[j]=-1; 
 
- 		    if(metric.url[j].playing && metric.errorcode==0)
+ 		    if(metric.errorcode==0)
 	  	    if( curl_easy_getinfo (http_handle[j], CURLINFO_RESPONSE_CODE, &http_code)== CURLE_OK)
 	  	    {
 	  	    	if(http_code==200)
@@ -268,6 +269,7 @@ long getfilesize(const char url[])
 	error |= curl_easy_setopt(curl_handle, CURLOPT_NOBODY, 1);
 	error |= curl_easy_setopt(curl_handle, CURLOPT_URL, url);
 	error |= curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0);
+	set_ip_version(curl_handle, ip_version);
 
 	if(error) {
 		ret = -2;
@@ -364,6 +366,8 @@ int initialize_curl_handle( CURL ** http_handle_ref, int i, videourl * url, stru
 	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_WRITEFUNCTION, write_data),i);
 	my_curl_easy_returnhandler(curl_easy_setopt(http_handle, CURLOPT_WRITEDATA, prog),i);
 
+	set_ip_version(http_handle, ip_version);
+
 
 		/* add the individual transfers */
 		CURLMcode mret = curl_multi_add_handle(multi_handle, http_handle);
@@ -392,6 +396,7 @@ int downloadfiles(videourl url [] )
 	if(multi_handle==NULL)
 	{
 		fprintf(stderr, "curl_multi_init() failed and returned NULL\n");
+		create_exception(CURLERROR, "curl_multi_init()");
 		return CURLERROR;
 	}
 	struct myprogress * prog= malloc(sizeof(struct myprogress [metric.numofstreams]));

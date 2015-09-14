@@ -1,10 +1,12 @@
 VERSION := 1.0
 
+# _Exit is C99, _exit is POSIX... the wnr3500l is not C99 compliant
+wnr3500l_CPPFLAGS := -D_Exit=_exit
 wrt54gl_LDLIBS := -lssl -lcrypto -lz
 
 BINARIES := youtube
 youtube_SOURCES := $(wildcard src/*.c)
-youtube_CPPFLAGS = -D_GNU_SOURCE -DCORO_SJLJ
+youtube_CPPFLAGS = -D_GNU_SOURCE -DCORO_SJLJ $($(UNIT)_CPPFLAGS)
 youtube_CFLAGS := -std=gnu99
 youtube_LDLIBS := -lcurl -lavformat -lavcodec -lavutil $($(UNIT)_LDLIBS)
 
@@ -29,6 +31,7 @@ youtube_LDFLAGS += -L$(BUILD_PATH)/ffmpeg_install/lib
 FFMPEG_VERSION := 2.2.3
 PRE_RULES += build/ffmpeg-$(FFMPEG_VERSION)/configure
 
+mr3020_FFMPEG_CPU := --arch=mips --cpu=24kc
 wnr3500l_FFMPEG_CPU := --arch=mips --enable-mips32r2 --disable-mipsfpu --enable-mipsdspr1 --disable-mipsdspr2
 wrt160nl_FFMPEG_CPU := --arch=mips --cpu=24kc
 wr741nd_FFMPEG_CPU := --arch=mips --cpu=24kc

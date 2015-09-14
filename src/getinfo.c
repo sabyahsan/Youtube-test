@@ -10,6 +10,7 @@
 #include "adaptive.h"
 #include "mm_parser.h"
 #include "curlops.h"
+#include "exception.h"
 extern metrics metric;
 #define ITAGLEN 7
 #define MANIFESTLEN 1024
@@ -487,7 +488,7 @@ static videourl * extract_url_list(char * data, int * index, bool adaptive)
 		strncpy(datatmp, data+start, finish-start);
 		datatmp[finish-start]='\0';
 		*index = split_urls(datatmp, url_list, adaptive);
-		if(*index<0)
+		if(*index<=0)
 		{
 			free(url_list);
 			url_list= NULL;
@@ -512,6 +513,11 @@ static void findformat(char * data)
 	/*get the url lists populated*/
 	videourl * url_list = extract_url_list(data, &index_nonadaptive, false);
 	videourl * url_list_adaptive =extract_url_list(data, &index_adaptive, true);
+
+	if(!url_list && !url_list_adaptive) {
+		create_exception(PARSE_ERROR, "No URL found");
+		goto out;
+	}
 
 	for(int i =0 ; i<index_nonadaptive; ++i) {
 		url_list[i].bitrate = getbitrate(url_list[i].url);
@@ -540,6 +546,9 @@ static void findformat(char * data)
 	qsort(metric.no_adap_url, index_nonadaptive, sizeof(*metric.no_adap_url), compar_bitrate);
 	qsort(metric.adap_audiourl, a_index, sizeof(*metric.adap_audiourl), compar_bitrate);
 	qsort(metric.adap_videourl, v_index, sizeof(*metric.adap_videourl), compar_bitrate);
+
+out:
+	return;
 }
 
 /* return value of 1 indicates non-adaptive format
@@ -559,7 +568,11 @@ void find_urls(char * data)
 	/*Get the stream URLs*/
 
 	findformat(data);
+	if(is_exception()) {
+		goto out;
+	}
 
+out:
 	return;
 
 }

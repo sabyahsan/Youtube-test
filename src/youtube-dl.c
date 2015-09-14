@@ -17,6 +17,8 @@
 #include "curlops.h"
 #include "getinfo.h"
 #include "attributes.h"
+#include "exception.h"
+#include <signal.h>
 #include <libavformat/avformat.h>
 #include <limits.h>
 metrics metric;
@@ -89,6 +91,71 @@ static int check_arguments(int argc, char* argv[], char * youtubelink)
 	return 1;
 }
 
+static const char *const signal_str[] = {
+	[SIGABRT]	= "SIGABRT",
+	[SIGALRM]	= "SIGALRM",
+	[SIGBUS]	= "SIGBUS",
+	[SIGFPE]	= "SIGFPE",
+	[SIGHUP]	= "SIGHUP",
+	[SIGILL]	= "SIGILL",
+	[SIGINT]	= "SIGINT",
+	[SIGIO]	= "SIGIO",
+	[SIGPIPE]	= "SIGPIPE",
+	[SIGPROF]	= "SIGPROF",
+	[SIGPWR]	= "SIGPWR",
+	[SIGQUIT]	= "SIGQUIT",
+	[SIGSEGV]	= "SIGSEGV",
+#ifdef SIGSTKFLT
+	[SIGSTKFLT]	= "SIGSTKFLT",
+#endif
+	[SIGSYS]	= "SIGSYS",
+	[SIGTERM]	= "SIGTERM",
+	[SIGTRAP]	= "SIGTRAP",
+	[SIGUSR1]	= "SIGUSR1",
+	[SIGUSR2]	= "SIGUSR2",
+	[SIGVTALRM]	= "SIGVTALRM",
+	[SIGXCPU]	= "SIGXCPU",
+	[SIGXFSZ]	= "SIGXFSZ"
+};
+
+static void term_signal_handler(int sig)
+{
+	static const char err_output_s[] = "YOUTUBE.4;;FAIL;;;;;;;;;;VIDEO;;;;;;;;;AUDIO;;;;;;;;;;;;;"QUOTE(SIGNALHIT)";Signal ";
+	write(1, err_output_s, sizeof(err_output_s) - 1);
+
+	if(sig < SIGRTMIN) {
+		write(1, signal_str[sig], sizeof(signal_str[sig]) - 1);
+	} else {
+		static const char rtmin[] = "RTMIN";
+		write(1, rtmin, sizeof(rtmin) - 1);
+		if((sig - SIGRTMIN) > 0) {
+			static const char plus_rtmin[] = "+";
+			write(1, plus_rtmin, sizeof(plus_rtmin) - 1);
+
+			char diff = sig - SIGRTMIN;
+			char diff_str[3];
+			size_t diff_str_len;
+			diff_str[0] = 48 + diff/100;
+			diff_str[1] = 48 + (diff - (diff_str[0] - 48)*100)/10;
+			diff_str[2] = 48 + (diff - (diff_str[0] - 48)*100 - (diff_str[1] - 48)*10);
+			diff_str_len = sizeof(diff_str);
+			for(size_t i = 0; i < sizeof(diff_str); ++i) {
+				if(diff_str[i] != 48) {
+					break;
+				}
+				diff_str_len--;
+			}
+
+			write(1, diff_str + sizeof(diff_str) - diff_str_len, diff_str_len);
+		}
+	}
+
+	static const char err_output_e[] = " received\n";
+	write(1, err_output_e, sizeof(err_output_e) - 1);
+
+	_Exit(128 + sig);
+}
+
 static void signal_handler(int UNUSED(sig))
 {
     metric.errorcode = SIGNALHIT;
@@ -120,6 +187,22 @@ static int init_libraries() {
 static int prepare_exit() {
 	if(atexit(mainexit) != 0) {
 		return -1;
+	}
+
+	for(size_t i = 0; i < sizeof(signal_str)/sizeof(*signal_str); ++i) {
+		if(signal_str[i] != NULL) {
+			if(signal(i, term_signal_handler) == SIG_ERR) {
+				return -1;
+			}
+		}
+	}
+
+	for(int i = SIGRTMIN; i <= SIGRTMAX; ++i) {
+		if(signal_str[i] != NULL) {
+			if(signal(i, term_signal_handler) == SIG_ERR) {
+				return -1;
+			}
+		}
 	}
 
 	if(signal(SIGINT, signal_handler) == SIG_ERR) {
@@ -179,17 +262,15 @@ static size_t write_to_memory(void *ptr, size_t size, size_t nmemb, void *userda
 	return written;
 }
 
-static int download_to_memory(char url[], void *memory) {
-	int ret = 0;
-
+static void download_to_memory(char url[], void *memory) {
 	CURL *curl = curl_easy_init();
 	if(!curl) {
-		ret = -1;
+		create_exception(RUNTIME_ERROR, "Error setting up cURL");
 		goto out;
 	}
 
 	if(set_ip_version(curl, ip_version) < 0) {
-		ret = -2;
+		create_exception(RUNTIME_ERROR, "Error setting up cURL");
 		goto out;
 	}
 
@@ -204,9 +285,11 @@ static int download_to_memory(char url[], void *memory) {
 	/* we want the data to this memory */
 	error |= curl_easy_setopt(curl, CURLOPT_WRITEDATA, memory);
 	error |= curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+	char error_msg[CURL_ERROR_SIZE];
+	error |= curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_msg);
 
 	if(error) {
-		ret = -3;
+		create_exception(RUNTIME_ERROR, "Error setting up cURL");
 		goto out;
 	}
 
@@ -214,15 +297,30 @@ static int download_to_memory(char url[], void *memory) {
 	error = curl_easy_perform(curl);
 
 	/* Check for errors  */
-	if(error != CURLE_OK)
-		fprintf(stderr, "curl_easy_perform() failed with %d: %s\n", error,
-				 curl_easy_strerror(error));
+	if(error != CURLE_OK) {
+		char error_msg_copy[CURL_ERROR_SIZE];
+		strcpy(error_msg_copy, error_msg);
+
+		char *ip_str = "unknown";
+#ifndef CURL_LOWER_7_19
+		curl_easy_getinfo(curl, CURLINFO_PRIMARY_IP, &ip_str);
+#endif
+
+		if(error == CURLE_COULDNT_RESOLVE_HOST) {
+			create_exception(DNS_RESOLUTION_API_ERROR, "curl_easy_perform: %s (IP: %s)", error_msg_copy, ip_str);
+		} else if(error == CURLE_COULDNT_CONNECT) {
+			create_exception(CONNECTION_API_ERROR, "curl_easy_perform: %s (IP: %s)", error_msg_copy, ip_str);
+		} else {
+			create_exception(NETWORK_API_ERROR, "curl_easy_perform: %s (IP: %s)", error_msg_copy, ip_str);
+		}
+		goto out;
+	}
 
 	long http_code;
 	error = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 	if(error || http_code != 200)
 	{
-		ret = -4;
+		create_exception(NETWORK_API_ERROR, "Server returned error %ld", http_code);
 		goto out;
 	}
 
@@ -240,7 +338,7 @@ static int download_to_memory(char url[], void *memory) {
 
 out:
 	if(curl) curl_easy_cleanup(curl);
-	return ret;
+	return;
 }
 
 static int extract_media_urls(char youtubelink[]) {
@@ -248,14 +346,13 @@ static int extract_media_urls(char youtubelink[]) {
 
 	char *pagecontent = malloc(sizeof(char [PAGESIZE]));
 	if(pagecontent == NULL) {
-		ret = -1;
+		create_exception(RUNTIME_ERROR, "malloc: %s", strerror(errno));
 		goto out;
 	}
 	memzero(pagecontent, PAGESIZE*sizeof(char));
 
-	if(download_to_memory(youtubelink, pagecontent) < 0) {
-		metric.errorcode=FIRSTRESPONSERROR;
-		ret = -2;
+	download_to_memory(youtubelink, pagecontent);
+	if(is_exception()) {
 		goto out;
 	}
 
@@ -263,6 +360,9 @@ static int extract_media_urls(char youtubelink[]) {
 //	TODO:errorcodes for each stream can be different. Add functionality to override errorcode of 1 over the other.
 
 	find_urls(pagecontent);
+	if(is_exception()) {
+		goto out;
+	}
 
 out:
 	free(pagecontent);
@@ -288,21 +388,22 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 
 	strncpy(metric.link, youtubelink, MAXURLLENGTH-1);
-	if(extract_media_urls(youtubelink) < 0) {
-		exit(EXIT_FAILURE);
+	extract_media_urls(youtubelink);
+	if(is_exception()) {
+		goto out;
 	}
 
 	bool found = false;
 
-	int i=0;
-	do {
+	int i=-1;
+	while(strlen(metric.adap_videourl[++i].url) != 0) {
 		restart_metrics(&metric);
 
 		metric.url[0] = metric.adap_videourl[i];
 		metric.numofstreams = 1;
 
-		int j = 0;
-		do {
+		int j = -1;
+		while(strlen(metric.adap_audiourl[++j].url) != 0) {
 			char *vformat = strstr(metric.adap_videourl[i].type, "video/") + strlen("video/");
 			char *aformat = strstr(metric.adap_audiourl[j].type, "audio/") + strlen("audio/");
 
@@ -311,9 +412,13 @@ int main(int argc, char* argv[])
 				metric.numofstreams = 2;
 				break;
 			}
-		} while(strlen(metric.adap_audiourl[++j].url) != 0);
+		}
 
 		if(metric.url[0].bitrate + metric.url[1].bitrate > max_bitrate) {
+			continue;
+		}
+
+		if(metric.url[0].bitrate <= 0 || metric.url[1].bitrate <= 0) {
 			continue;
 		}
 
@@ -353,7 +458,7 @@ int main(int argc, char* argv[])
 
 		found = true;
 		break;
-	} while(strlen(metric.adap_videourl[++i].url) != 0);
+	}
 
 	if(!found) {
 		memset(&metric.url[STREAM_AUDIO], 0, sizeof(metric.url[STREAM_AUDIO]));
@@ -366,13 +471,17 @@ int main(int argc, char* argv[])
 
 		metric.numofstreams = 1;
 
-		i=0;
-		do {
+		i=-1;
+		while(strlen(metric.no_adap_url[++i].url) != 0) {
 			restart_metrics(&metric);
 
 			metric.url[0] = metric.no_adap_url[i];
 
 			if(metric.url[0].bitrate > max_bitrate) {
+				continue;
+			}
+
+			if(metric.url[0].bitrate <= 0) {
 				continue;
 			}
 
@@ -404,8 +513,10 @@ int main(int argc, char* argv[])
 
 			found = true;
 			break;
-		} while(strlen(metric.no_adap_url[++i].url) != 0);
+		}
 	}
+
+out:
 
 	if(metric.errorcode == 403) {
 		return 148;

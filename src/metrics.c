@@ -9,6 +9,7 @@
 #include "metrics.h"
 #include "helper.h"
 #include "youtube-dl.h"
+#include "exception.h"
 #include <inttypes.h>
 extern metrics metric;
 uint minbuffer = MIN_PREBUFFER;
@@ -94,6 +95,24 @@ void printvalues()
 {
 	double mtotalrate=1000000*(metric.totalbytes[STREAM_VIDEO] + metric.totalbytes[STREAM_AUDIO])/(metric.etime-metric.stime);
 
+	int max_bitrate = 0;
+	if(metric.adap_videourl[0].url[0] != 0) {
+		max_bitrate = metric.adap_videourl[0].bitrate;
+
+		char *vformat = strstr(metric.adap_videourl[0].type, "video/") + strlen("video/");
+		int i = -1;
+		while(strlen(metric.adap_audiourl[++i].url) != 0) {
+			char *aformat = strstr(metric.adap_audiourl[i].type, "audio/") + strlen("audio/");
+
+			if(strcmp(vformat, aformat) == 0) {
+				max_bitrate += metric.adap_audiourl[i].bitrate;
+				break;
+			}
+		}
+	} else {
+		max_bitrate = metric.no_adap_url[0].bitrate;
+	}
+
 	const char *result;
 	if(metric.errorcode == ITWORKED || metric.errorcode == MAXTESTRUNTIME) {
 		result = "OK";
@@ -101,7 +120,7 @@ void printvalues()
 		result = "FAIL";
 	}
 
-	printf("YOUTUBE.3;%lld;%s;", metric.htime/1000000,result);
+	printf("YOUTUBE.4;%lld;%s;", metric.htime/1000000,result);
 	char *video_id = strstr(metric.link, "v=") + 2;
 	printf("%s;", video_id);
 	switch(metric.ft)
@@ -174,5 +193,7 @@ void printvalues()
 	printf("%.0f;", metric.firstconnectiontime * 1000 * 1000);
 	printf("%.0f;",metric.startup+metric.initialprebuftime); /*startup delay*/ 
 	printf("%d;",metric.playout_buffer_seconds); /*range*/
-	printf("%d;\n",metric.errorcode); 
+	printf("%d;", max_bitrate);
+	printf("%d;",metric.errorcode);
+	printf("%s\n",exception.msg);
 }
