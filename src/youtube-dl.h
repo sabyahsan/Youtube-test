@@ -71,13 +71,13 @@ typedef enum {MP4=3, WEBM=4, FLV=5, TGPP=6, MP4_A=1, WEBM_A=2, NOTSUPPORTED=7} f
 
 typedef struct
 {
-	int itag;
+	//int itag; /*remove this*/
 	char url[CDNURLLEN];
-	char type[URLTYPELEN];
+	char type[URLTYPELEN];/*remove this*/
 	int bitrate;
 /*for the range parameter in the YouTube url*/
-	long range0; /*first byte to be fetched*/
-	long range1; /*last byte to be fetched*/
+	//long range0; /*first byte to be fetched*/
+	//long range1; /*last byte to be fetched*/
 	int playing; 
 } videourl;
 
@@ -92,7 +92,6 @@ typedef struct
 	videourl url[NUMOFSTREAMS];
 	videourl adap_videourl[URLLISTSIZE];
 	videourl adap_audiourl[URLLISTSIZE];
-	videourl no_adap_url[URLLISTSIZE];
 	filetype ft;
 	int numofstreams;
 	char link[MAXURLLENGTH];

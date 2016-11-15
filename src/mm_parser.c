@@ -95,10 +95,10 @@ void mm_parser(void *arg) {
 	while (av_read_frame(fmt_ctx, &pkt) >= 0) {
 		if (pkt.stream_index == videoStreamIdx) {
 			if (pkt.dts > 0) {
-                                /*SA-102014. metric.TSnow is the overall timestamp for which both audio and video packets have been received,
-                                  it should not be changed for video frames only. This would not affect the flow when the video is received 
-				  slower than the audio, but if it's the other way around, then the results would be inaccurate 
-                                metric.TSnow = (pkt.dts * vtb) / (SEC2PICO / SEC2MILI);*/
+                /*SA-102014. metric.TSnow is the overall timestamp for which both audio and video packets have been received,
+                it should not be changed for video frames only. This would not affect the flow when the video is received
+                slower than the audio, but if it's the other way around, then the results would be inaccurate
+                metric.TSnow = (pkt.dts * vtb) / (SEC2PICO / SEC2MILI);*/
 				metric.TSlist[STREAM_VIDEO] = (pkt.dts * vtb) / (SEC2PICO / SEC2MILI);
 				/*SA-10214- checkstall should be called after the TS is updated for each stream, instead of when new packets 
 				  arrive, this ensures that we know exactly what time the playout would stop and stall would occur*/ 

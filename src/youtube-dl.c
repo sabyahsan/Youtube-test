@@ -30,7 +30,7 @@ int min_test_time = 0;
 bool OneBitrate = false; /*If false, terminate current transfer if a stall occurs and try downloading a lower bit rate
 			   If true, Continue downloading the same bit rate video even when stall occurs. */
 
-static int check_arguments(int argc, char* argv[], char * youtubelink)
+static int check_arguments(int argc, char* argv[], char * mpdlink)
 {
 	for(int i=1; i<argc; i++)
 	{
@@ -67,18 +67,18 @@ static int check_arguments(int argc, char* argv[], char * youtubelink)
 			return 0;
 		}
 
-		else if(strstr(argv[i], "youtube")!=NULL && strstr(argv[i], "watch")!=NULL )
+		else if(strcmp(argv[i], "--url")==0)
 		{
-			if(strlen(argv[i])>MAXURLLENGTH)
+			if(strlen(argv[++i])>MAXURLLENGTH)
 			{
-				printf("Youtbe URL provided as argument is too long\n");
+				printf("URL provided as argument is too long\n");
 				return 0;
 			}
 			else
-				strcpy(youtubelink, argv[i]);
+				strcpy(mpdlink, argv[i]);
 		}
 	}
-	if(strlen(youtubelink)==0)
+	if(strlen(mpdlink)==0)
 	{
 		printf("Youtbe URL not detected\n");
 		printf("To print help use the program --help switch : %s --help\n", argv[0]);
@@ -229,7 +229,7 @@ static int download_to_memory(char url[], void *memory) {
 	if( curl_easy_getinfo(curl, CURLINFO_CONNECT_TIME, &metric.firstconnectiontime)!= CURLE_OK)
 		metric.firstconnectiontime = -1;
         else {
-		double lookup_time; 
+            double lookup_time;
         	if( curl_easy_getinfo(curl, CURLINFO_NAMELOOKUP_TIME, &lookup_time)!= CURLE_OK) {
                 	metric.firstconnectiontime=-1;
                 } else {
@@ -243,7 +243,7 @@ out:
 	return ret;
 }
 
-static int extract_media_urls(char youtubelink[]) {
+static int extract_media_urls(char mpdlink[]) {
 	int ret = 0;
 
 	char *pagecontent = malloc(sizeof(char [PAGESIZE]));
@@ -253,7 +253,7 @@ static int extract_media_urls(char youtubelink[]) {
 	}
 	memzero(pagecontent, PAGESIZE*sizeof(char));
 
-	if(download_to_memory(youtubelink, pagecontent) < 0) {
+	if(download_to_memory(mpdlink, pagecontent) < 0) {
 		metric.errorcode=FIRSTRESPONSERROR;
 		ret = -2;
 		goto out;
@@ -280,15 +280,17 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	char youtubelink[MAXURLLENGTH]="http://www.youtube.com/watch?v=j8cKdDkkIYY";
+	char mpdlink[MAXURLLENGTH]="http://www-itec.uni-klu.ac.at/ftp/datasets/DASHDataset2014/BigBuckBunny/4sec/BigBuckBunny_4s_simple_2014_05_09.mpd";
 
 	init_metrics(&metric);
 
-	if(!check_arguments(argc, argv, youtubelink))
+	if(!check_arguments(argc, argv, mpdlink))
 		exit(EXIT_FAILURE);
 
-	strncpy(metric.link, youtubelink, MAXURLLENGTH-1);
-	if(extract_media_urls(youtubelink) < 0) {
+	strncpy(metric.link, mpdlink, MAXURLLENGTH-1);
+    
+    /*read mpd file and get list of formats*/ 
+	if(extract_media_urls(mpdlink) < 0) {
 		exit(EXIT_FAILURE);
 	}
 
