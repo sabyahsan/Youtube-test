@@ -136,7 +136,7 @@ void printvalues()
 	printf("%"PRIu64";", metric.TSnow*1000); // duration
 	printf("%.0f;",metric.initialprebuftime); // Initial prebuf time
 	printf("%.0f;",mtotalrate); //mtotal rate
-	printf("VIDEO;%d;%.0f;",metric.url[STREAM_VIDEO].itag,metric.downloadrate[STREAM_VIDEO]);
+	printf("VIDEO;%.0f;",metric.downloadrate[STREAM_VIDEO]);
 	printf("%.0f;", metric.totalbytes[STREAM_VIDEO]); //total bytes
 	printf("%.0f;", metric.downloadtime[STREAM_VIDEO] * 1000 * 1000);
 	//printf("%s;", metric.url[STREAM_VIDEO].url);
@@ -154,7 +154,7 @@ void printvalues()
 	printf("%s;", metric.cdnip[STREAM_VIDEO]);
 	printf("%.0f;", metric.connectiontime[STREAM_VIDEO] * 1000 * 1000);
 	printf("%d;",metric.url[STREAM_VIDEO].bitrate);
-	printf("AUDIO;%d;%.0f;",metric.url[STREAM_AUDIO].itag,metric.downloadrate[STREAM_AUDIO]);
+	printf("AUDIO;%.0f;",metric.downloadrate[STREAM_AUDIO]);
 	printf("%.0f;", metric.totalbytes[STREAM_AUDIO]); //total bytes
 	printf("%.0f;", metric.downloadtime[STREAM_AUDIO] * 1000 * 1000);
 	//printf("%s;", metric.url[STREAM_AUDIO].url);

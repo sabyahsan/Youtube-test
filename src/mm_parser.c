@@ -23,19 +23,21 @@ extern metrics metric;
 
 coro_context corou_main;
 
-static int read_packet(void *opaque, uint8_t *buf, int buf_size) {
+static int read_packet(void *opaque, uint8_t *buf, int buf_size)
+{
 	struct myprogress *prog = ((struct myprogress *) opaque);
 
 	coro_transfer(&prog->parser_coro, &corou_main);
 
 	assert(prog->bytes_avail <= (size_t)buf_size);
-
+    
 	memcpy(buf, prog->curl_buffer, prog->bytes_avail);
 
 	return prog->bytes_avail;
 }
 
-void mm_parser(void *arg) {
+void mm_parser(void *arg)
+{
 	struct myprogress *prog = ((struct myprogress *) arg);
 
 	void *buff = av_malloc(CURL_MAX_WRITE_SIZE);
@@ -67,7 +69,7 @@ void mm_parser(void *arg) {
 			audioStreamIdx = i;
 		}
 	}
-
+    
 	unsigned long long vtb = 0;
 	if (videoStreamIdx != -1) {
 		int vnum = fmt_ctx->streams[videoStreamIdx]->time_base.num;
@@ -92,6 +94,7 @@ void mm_parser(void *arg) {
 	av_init_packet(&pkt);
 	pkt.data = NULL;
 	pkt.size = 0;
+    printf("We have no trouble till here  5\n"); fflush(stdout);
 	while (av_read_frame(fmt_ctx, &pkt) >= 0) {
 		if (pkt.stream_index == videoStreamIdx) {
 			if (pkt.dts > 0) {
@@ -101,7 +104,8 @@ void mm_parser(void *arg) {
                 metric.TSnow = (pkt.dts * vtb) / (SEC2PICO / SEC2MILI);*/
 				metric.TSlist[STREAM_VIDEO] = (pkt.dts * vtb) / (SEC2PICO / SEC2MILI);
 				/*SA-10214- checkstall should be called after the TS is updated for each stream, instead of when new packets 
-				  arrive, this ensures that we know exactly what time the playout would stop and stall would occur*/ 
+				  arrive, this ensures that we know exactly what time the playout would stop and stall would occur*/
+                printf("Timestamp %ld\n", metric.TSlist[STREAM_VIDEO] );
 				checkstall(false); 
 			}
 		} else if (pkt.stream_index == audioStreamIdx) {
@@ -112,7 +116,7 @@ void mm_parser(void *arg) {
 				checkstall(false); 
 			}
 		}
-		av_free_packet(&pkt);
+        av_packet_unref(&pkt);
 	}
 
 	avformat_free_context(fmt_ctx);

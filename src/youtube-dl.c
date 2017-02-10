@@ -15,8 +15,9 @@
 #include "helper.h"
 #include "metrics.h"
 #include "curlops.h"
-#include "getinfo.h"
+//#include "getinfo.h"
 #include "attributes.h"
+#include "readmpd.h"
 #include <libavformat/avformat.h>
 #include <limits.h>
 metrics metric;
@@ -103,7 +104,7 @@ static void mainexit()
 #endif
 	if(metric.errorcode==0)
 		metric.errorcode = WERSCREWED;
-	printvalues();
+	//printvalues();
 }
 
 static int init_libraries() {
@@ -149,18 +150,18 @@ static void init_metrics(metrics *metric) {
 }
 
 static void restart_metrics(metrics *metric) {
-	metric->numofstalls = 0;
-	metric->totalstalltime = 0;
-	metric->initialprebuftime = -1;
-	metric->htime = gettimelong();
-	metric->TSnow = 0;
+	metric->numofstalls         = 0;
+	metric->totalstalltime      = 0;
+	metric->initialprebuftime   = -1;
+	metric->htime               = gettimelong();
+	metric->TSnow               = 0;
 	memset(metric->TSlist, 0, sizeof(metric->TSlist));
-	metric->TS0 = 0;
-	metric->Tmin=-1;
-	metric->T0 = -1;
-	metric->Tmin0 = -1;
-	metric->errorcode=0;
-	metric->fail_on_stall = true;
+	metric->TS0                 = 0;
+	metric->Tmin                = -1;
+	metric->T0                  = -1;
+	metric->Tmin0               = -1;
+	metric->errorcode           = 0;
+	metric->fail_on_stall       = true;
 }
 
 static size_t write_to_memory(void *ptr, size_t size, size_t nmemb, void *userdata)
@@ -259,14 +260,10 @@ static int extract_media_urls(char mpdlink[]) {
 		goto out;
 	}
 
-//		TODO:metric.itag needs to be added, updated and printed.
-//	TODO:errorcodes for each stream can be different. Add functionality to override errorcode of 1 over the other.
-
-	find_urls(pagecontent);
+	ret = read_mpddata(pagecontent, mpdlink);
 
 out:
 	free(pagecontent);
-
 	return ret;
 }
 
@@ -290,130 +287,148 @@ int main(int argc, char* argv[])
 	strncpy(metric.link, mpdlink, MAXURLLENGTH-1);
     
     /*read mpd file and get list of formats*/ 
-	if(extract_media_urls(mpdlink) < 0) {
+	if ( extract_media_urls(mpdlink) < 0) {
 		exit(EXIT_FAILURE);
 	}
+    
+    for (int i = 0; i < metric.num_of_levels ; i++)
+    {
+        printf(" BITRATE LEVEL : %d Presenting 1st and last URL\n", metric.bitrate_level[i].bitrate);
+        printf(" %s\n", metric.bitrate_level[i].segments[0]);
+        printf(" %s\n", metric.bitrate_level[i].segments[metric.num_of_segments-1]);
+    }
+    
+    /*Playing only video streams for now*/
+    metric.numofstreams = 1;
+    
+    int ret;
+    if ( ( ret = play_video())> 0) {
+        printf("Return value %d\n",ret );
+        exit(EXIT_FAILURE);
+    }
 
-	bool found = false;
+    exit(0);
 
-	int i=0;
-	do {
-		restart_metrics(&metric);
-
-		metric.url[0] = metric.adap_videourl[i];
-		metric.numofstreams = 1;
-
-		int j = 0;
-		do {
-			char *vformat = strstr(metric.adap_videourl[i].type, "video/") + strlen("video/");
-			char *aformat = strstr(metric.adap_audiourl[j].type, "audio/") + strlen("audio/");
-
-			if(strcmp(vformat, aformat) == 0) {
-				metric.url[1] = metric.adap_audiourl[j];
-				metric.numofstreams = 2;
-				break;
-			}
-		} while(strlen(metric.adap_audiourl[++j].url) != 0);
-
-		if(metric.url[0].bitrate + metric.url[1].bitrate > max_bitrate) {
-			continue;
-		}
-
-		if(strcasestr(metric.url[0].type, "MP4"))
-		   metric.ft = MP4;
-		else if(strcasestr(metric.url[0].type, "webm"))
-		   metric.ft = WEBM;
-		else if(strcasestr(metric.url[0].type, "flv"))
-		   metric.ft = FLV;
-		else if(strcasestr(metric.url[0].type, "3gpp"))
-		   metric.ft = TGPP;
-		if(metric.numofstreams > 1) {
-		   if(metric.ft == MP4) {
-			   metric.ft = MP4_A;
-		   } else if(metric.ft == WEBM) {
-			   metric.ft = WEBM_A;
-		   }
-		}
-
-		if(strlen(metric.adap_videourl[i + 1].url) == 0 &&
-		   strlen(metric.no_adap_url[0].url) == 0 || OneBitrate) {
-			metric.fail_on_stall = false;
-		}
-
-		downloadfiles(metric.url);
-
-		if(metric.errorcode == ITWORKED &&
-		   metric.downloadtime[STREAM_VIDEO] < min_test_time) {
-			metric.errorcode = TOO_FAST;
-		}
-
-		if(metric.fail_on_stall &&
-		   (metric.errorcode == ERROR_STALL || metric.errorcode == TOO_FAST)) {
-			printvalues();
-			continue;
-		}
-
-		found = true;
-		break;
-	} while(strlen(metric.adap_videourl[++i].url) != 0);
-
-	if(!found) {
-		memset(&metric.url[STREAM_AUDIO], 0, sizeof(metric.url[STREAM_AUDIO]));
-		memset(&metric.cdnip[STREAM_AUDIO], 0, sizeof(metric.cdnip[STREAM_AUDIO]));
-		metric.downloadtime[STREAM_AUDIO] = 0;
-		metric.totalbytes[STREAM_AUDIO] = 0;
-		metric.TSlist[STREAM_AUDIO] = 0;
-		metric.downloadrate[STREAM_AUDIO] = 0;
-		metric.connectiontime[STREAM_AUDIO] = 0;
-
-		metric.numofstreams = 1;
-
-		i=0;
-		do {
-			restart_metrics(&metric);
-
-			metric.url[0] = metric.no_adap_url[i];
-
-			if(metric.url[0].bitrate > max_bitrate) {
-				continue;
-			}
-
-			if(strcasestr(metric.url[0].type, "MP4"))
-			   metric.ft = MP4;
-			else if(strcasestr(metric.url[0].type, "webm"))
-			   metric.ft = WEBM;
-			else if(strcasestr(metric.url[0].type, "flv"))
-			   metric.ft = FLV;
-			else if(strcasestr(metric.url[0].type, "3gpp"))
-			   metric.ft = TGPP;
-
-			if(strlen(metric.no_adap_url[i + 1].url) == 0 || OneBitrate) {
-				metric.fail_on_stall = false;
-			}
-
-			downloadfiles(metric.url);
-
-			if(metric.errorcode == ITWORKED &&
-			   metric.downloadtime[STREAM_VIDEO] < min_test_time) {
-				metric.errorcode = TOO_FAST;
-			}
-
-			if(metric.fail_on_stall &&
-			   (metric.errorcode == ERROR_STALL || metric.errorcode == TOO_FAST)) {
-				printvalues();
-				continue;
-			}
-
-			found = true;
-			break;
-		} while(strlen(metric.no_adap_url[++i].url) != 0);
-	}
-
-	if(metric.errorcode == 403) {
-		return 148;
-	} else if(metric.errorcode == TOO_FAST) {
-		return 149;
-	} else {
-		return 0;
-	}
+//	bool found = false;
+//
+//	int i=0;
+//	do {
+//		restart_metrics(&metric);
+//
+//		metric.url[0] = metric.adap_videourl[i];
+//		metric.numofstreams = 1;
+//
+//		int j = 0;
+//		do {
+//			char *vformat = strstr(metric.adap_videourl[i].type, "video/") + strlen("video/");
+//			char *aformat = strstr(metric.adap_audiourl[j].type, "audio/") + strlen("audio/");
+//
+//			if(strcmp(vformat, aformat) == 0) {
+//				metric.url[1] = metric.adap_audiourl[j];
+//				metric.numofstreams = 2;
+//				break;
+//			}
+//		} while(strlen(metric.adap_audiourl[++j].url) != 0);
+//
+//		if(metric.url[0].bitrate + metric.url[1].bitrate > max_bitrate) {
+//			continue;
+//		}
+//
+//		if(strcasestr(metric.url[0].type, "MP4"))
+//		   metric.ft = MP4;
+//		else if(strcasestr(metric.url[0].type, "webm"))
+//		   metric.ft = WEBM;
+//		else if(strcasestr(metric.url[0].type, "flv"))
+//		   metric.ft = FLV;
+//		else if(strcasestr(metric.url[0].type, "3gpp"))
+//		   metric.ft = TGPP;
+//		if(metric.numofstreams > 1) {
+//		   if(metric.ft == MP4) {
+//			   metric.ft = MP4_A;
+//		   } else if(metric.ft == WEBM) {
+//			   metric.ft = WEBM_A;
+//		   }
+//		}
+//
+//		if(strlen(metric.adap_videourl[i + 1].url) == 0 &&
+//		   strlen(metric.no_adap_url[0].url) == 0 || OneBitrate) {
+//			metric.fail_on_stall = false;
+//		}
+//
+//		downloadfiles(metric.url);
+//
+//		if(metric.errorcode == ITWORKED &&
+//		   metric.downloadtime[STREAM_VIDEO] < min_test_time) {
+//			metric.errorcode = TOO_FAST;
+//		}
+//
+//		if(metric.fail_on_stall &&
+//		   (metric.errorcode == ERROR_STALL || metric.errorcode == TOO_FAST)) {
+//			printvalues();
+//			continue;
+//		}
+//
+//		found = true;
+//		break;
+//	} while(strlen(metric.adap_videourl[++i].url) != 0);
+//
+//	if(!found) {
+//		memset(&metric.url[STREAM_AUDIO], 0, sizeof(metric.url[STREAM_AUDIO]));
+//		memset(&metric.cdnip[STREAM_AUDIO], 0, sizeof(metric.cdnip[STREAM_AUDIO]));
+//		metric.downloadtime[STREAM_AUDIO] = 0;
+//		metric.totalbytes[STREAM_AUDIO] = 0;
+//		metric.TSlist[STREAM_AUDIO] = 0;
+//		metric.downloadrate[STREAM_AUDIO] = 0;
+//		metric.connectiontime[STREAM_AUDIO] = 0;
+//
+//		metric.numofstreams = 1;
+//
+//		i=0;
+//		do {
+//			restart_metrics(&metric);
+//
+//			metric.url[0] = metric.no_adap_url[i];
+//
+//			if(metric.url[0].bitrate > max_bitrate) {
+//				continue;
+//			}
+//
+//			if(strcasestr(metric.url[0].type, "MP4"))
+//			   metric.ft = MP4;
+//			else if(strcasestr(metric.url[0].type, "webm"))
+//			   metric.ft = WEBM;
+//			else if(strcasestr(metric.url[0].type, "flv"))
+//			   metric.ft = FLV;
+//			else if(strcasestr(metric.url[0].type, "3gpp"))
+//			   metric.ft = TGPP;
+//
+//			if(strlen(metric.no_adap_url[i + 1].url) == 0 || OneBitrate) {
+//				metric.fail_on_stall = false;
+//			}
+//
+//			downloadfiles(metric.url);
+//
+//			if(metric.errorcode == ITWORKED &&
+//			   metric.downloadtime[STREAM_VIDEO] < min_test_time) {
+//				metric.errorcode = TOO_FAST;
+//			}
+//
+//			if(metric.fail_on_stall &&
+//			   (metric.errorcode == ERROR_STALL || metric.errorcode == TOO_FAST)) {
+//				printvalues();
+//				continue;
+//			}
+//
+//			found = true;
+//			break;
+//		} while(strlen(metric.no_adap_url[++i].url) != 0);
+//	}
+//
+//	if(metric.errorcode == 403) {
+//		return 148;
+//	} else if(metric.errorcode == TOO_FAST) {
+//		return 149;
+//	} else {
+//		return 0;
+//	}
 }
