@@ -43,6 +43,7 @@
 #define CURLERROR 610
 #define CURLERROR_GETINFO 611
 #define FIRSTRESPONSERROR 620
+#define MAX_SUPPORTED_BITRATE_LEVELS 24
 
 #define LEN_PLAYOUT_BUFFER 40 /*Length of the playout buffer in seconds*/
 #define LEN_CHUNK_FETCH 1 /*Length to be requested to refill buffer*/
@@ -68,12 +69,27 @@ typedef enum {MP4=3, WEBM=4, FLV=5, TGPP=6, MP4_A=1, WEBM_A=2, NOTSUPPORTED=7} f
 #define URLSIGLEN 100
 #define CDNURLLEN 1500
 #define URLLISTSIZE 24
+#define MAX_DASH_INIT_SEGMENT_SIZE 1000
 
 typedef struct
 {
-	int itag;
+    uint8_t data[MAX_DASH_INIT_SEGMENT_SIZE];
+    uint32_t size;
+} dash_init_segment;
+
+typedef struct
+{
+    int bitrate;
+    char **segments;
+    dash_init_segment init;
+} manifest;
+
+
+typedef struct
+{
+	//int itag; /*remove this*/
 	char url[CDNURLLEN];
-	char type[URLTYPELEN];
+	char type[URLTYPELEN];/*remove this*/
 	int bitrate;
 /*for the range parameter in the YouTube url*/
 	long range0; /*first byte to be fetched*/
@@ -90,9 +106,11 @@ typedef struct
 typedef struct
 {
 	videourl url[NUMOFSTREAMS];
+    int num_of_segments;
+    int num_of_levels;
+    manifest bitrate_level[MAX_SUPPORTED_BITRATE_LEVELS];
 	videourl adap_videourl[URLLISTSIZE];
 	videourl adap_audiourl[URLLISTSIZE];
-	videourl no_adap_url[URLLISTSIZE];
 	filetype ft;
 	int numofstreams;
 	char link[MAXURLLENGTH];
