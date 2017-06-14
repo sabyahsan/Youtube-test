@@ -1,12 +1,24 @@
 /*
- ============================================================================
- Name        : youtube-dl.c
- Author      : Saba
- Version     :
- Copyright   : Your copyright notice
- Description : Hello World in C, Ansi-style
- ============================================================================
+ *
+ *      Year   : 2013-2017
+ *      Author : Saba Ahsan
+ *               Cristian Morales Vega
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
+ 
 
 
 
@@ -52,7 +64,7 @@ static int check_arguments(int argc, char* argv[], char * youtubelink)
 		}
 		else if(strcmp(argv[i], "--range")==0)
 		{
-			/*not specifying any value requests whole file. Otherwise value must be greater than LEN_CHUNK_MINIMUM seconds*/
+			/*value must be greater than LEN_CHUNK_MINIMUM seconds*/
 			metric.playout_buffer_seconds = atoi(argv[++i]);
 			if(metric.playout_buffer_seconds<LEN_CHUNK_MINIMUM)
 				metric.playout_buffer_seconds  = LEN_CHUNK_MINIMUM;
@@ -143,8 +155,7 @@ static void init_metrics(metrics *metric) {
 	metric->ft = NOTSUPPORTED;
 	metric->errorcode=0;
 	metric->fail_on_stall = true;
-	/*if this value is set to 0, the whole file is requested. */
-	metric->playout_buffer_seconds=0;
+	metric->playout_buffer_seconds = LEN_CHUNK_MINIMUM;
 
 }
 
@@ -333,8 +344,8 @@ int main(int argc, char* argv[])
 		   }
 		}
 
-		if(strlen(metric.adap_videourl[i + 1].url) == 0 &&
-		   strlen(metric.no_adap_url[0].url) == 0 || OneBitrate) {
+		if((strlen(metric.adap_videourl[i + 1].url) == 0 &&
+		   strlen(metric.no_adap_url[0].url) == 0) || OneBitrate) {
 			metric.fail_on_stall = false;
 		}
 
