@@ -1,9 +1,6 @@
 Youtube-test
 ============
-
-YouTube performance test for SamKnows probes using ffmpeg and libcurl libraries
-
-LD_LIBRARY_PATH=build/native_default/ffmpeg_install/lib/ build/native_default/youtube
+This test is a simple C based YouTube test for actively measuring the quality of YouTube video download in your network. The test was designed to run on SamKnows probes for large scale active measurements from the user end. The test reports multiple metrics including stall events, start up delay, throughput etc. and also the media servers that were used for fetching the video. 
 
 License: 
 
