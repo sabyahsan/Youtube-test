@@ -41,6 +41,7 @@ int max_bitrate = INT_MAX;
 int min_test_time = 0;
 bool OneBitrate = false; /*If false, terminate current transfer if a stall occurs and try downloading a lower bit rate
 			   If true, Continue downloading the same bit rate video even when stall occurs. */
+int buffer_len = LEN_CHUNK_MINIMUM; 
 
 static int check_arguments(int argc, char* argv[], char * youtubelink)
 {
@@ -65,9 +66,9 @@ static int check_arguments(int argc, char* argv[], char * youtubelink)
 		else if(strcmp(argv[i], "--range")==0)
 		{
 			/*value must be greater than LEN_CHUNK_MINIMUM seconds*/
-			metric.playout_buffer_seconds = atoi(argv[++i]);
-			if(metric.playout_buffer_seconds<LEN_CHUNK_MINIMUM)
-				metric.playout_buffer_seconds  = LEN_CHUNK_MINIMUM;
+			buffer_len = atoi(argv[++i]);
+			if(buffer_len<LEN_CHUNK_MINIMUM)
+				buffer_len = LEN_CHUNK_MINIMUM;
 		}
 		else if(strcmp(argv[i], "--mintime")==0)
 		{
@@ -155,7 +156,7 @@ static void init_metrics(metrics *metric) {
 	metric->ft = NOTSUPPORTED;
 	metric->errorcode=0;
 	metric->fail_on_stall = true;
-	metric->playout_buffer_seconds = LEN_CHUNK_MINIMUM;
+	metric->playout_buffer_seconds = buffer_len;
 
 }
 
@@ -283,6 +284,11 @@ out:
 
 int main(int argc, char* argv[])
 {
+	char youtubelink[MAXURLLENGTH]="http://www.youtube.com/watch?v=j8cKdDkkIYY";
+
+	if(!check_arguments(argc, argv, youtubelink))
+		exit(EXIT_FAILURE);
+		
 	if(prepare_exit() < 0) {
 		exit(EXIT_FAILURE);
 	}
@@ -291,12 +297,7 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	char youtubelink[MAXURLLENGTH]="http://www.youtube.com/watch?v=j8cKdDkkIYY";
-
 	init_metrics(&metric);
-
-	if(!check_arguments(argc, argv, youtubelink))
-		exit(EXIT_FAILURE);
 
 	strncpy(metric.link, youtubelink, MAXURLLENGTH-1);
 	if(extract_media_urls(youtubelink) < 0) {

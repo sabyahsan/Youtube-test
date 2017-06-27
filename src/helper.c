@@ -99,21 +99,28 @@ void printhelp(char * name)
 
 	printf("Usage of the program:\n");
 	printf("\n");
-	printf("%s <optional-parameters>\n", name);
+	printf("%s <arguments>\n", name);
 	printf("\n");
-	printf("Optional parameters\n");
+	printf("Arguments\n");
 	printf("\t<url> => URL of the YouTube video\n");
-	printf("\t--nodownload => Only get the video information, actual video is not downloaded\n");
 	printf("\n");
 	printf("\t--verbose => Print instantaneous metric values when downloading video\n\t\tHas no effect if --nodownload is used\n");
 	printf("\n");
-	printf("\t--range <x>=> The length of the playout buffer in seconds. If no value is given whole file is downloaded\n");
-	printf("\t\t otherwise only x worth of video is buffered at any time. Value of x must be greater than 5, smaller values\n\t\t default to 5 automatically\n"); 
+	printf("\t--range <s> => The length of the playout buffer in seconds. Default value is 5; value of x must be greater than 5 \n");
 	printf("\n");
-	printf("\t--onebitrate => when used the client does not switch to lower bit rate when a stall occurs\n");
+	printf("\t--onebitrate => when used the client does not switch to lower bit rate when a stall occurs. Disabled by default.\n");
+	printf("\n");
+    printf("\t--maxbitrate <bps> => if specified, the client will not attempt to download qualities with a higher bit rate, default MAXINT\n");
+	printf("\n");
+    printf("\t--mintime <x> => if a test finishes before this time, it is considered a failure, default value is 0\n");
+	printf("\n");
+    printf("\t--maxtime <x> => maximum time for which the test should run, default value is MAXINT\n");
+	printf("\n");
+	printf("\t-4 => Use IPv4 only\n");
+	printf("\n");
+	printf("\t-6 => Use IPv6 only\n");
 	printf("\n");
 	printf("RUN WITHOUT ARGUMENTS FOR TESTING.\n");
-	exit(0); 
 
 }
 
