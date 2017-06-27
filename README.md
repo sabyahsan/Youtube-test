@@ -1,6 +1,8 @@
 Youtube-test
 ============
-This test is a simple C based YouTube test for actively measuring the quality of YouTube video download in your network. The test was designed to run on SamKnows probes for large scale active measurements from the user end. It reports multiple metrics including stall events, start up delay, throughput etc. and also the media servers that were used for fetching the video. The test does not render or decode the video, only demuxes it to read timestamps of the frames to maintain a playout buffer and predict stalls and startup delay. 
+This test is a simple C based YouTube test for actively measuring the quality of YouTube video download in your network. The test was designed to run on SamKnows probes for large scale active measurements from the user end. It reports multiple metrics including stall events, start up delay, throughput etc. and also the media servers that were used for fetching the video. The test does not render or decode the video, only demuxes it to read timestamps of the frames to maintain a playout buffer and predict stalls and startup delay.
+
+Refer to [test sequence diagram](./sequence.pdf) for the trigger points for different metric measurements. 
 
 ## Compiling
 
@@ -87,7 +89,7 @@ When the test finishes, it prints a ; separated list of metrics. The values in o
 - Buffer Length (in seconds) => As specified by the argument --range, just used for reporting
 - Error code => Internal error code in case of failure. 
 
-Refer to (sequence.pdf) for the trigger points for different metric measurements. 
+
 
 ## License: 
 
