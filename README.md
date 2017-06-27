@@ -1,23 +1,52 @@
 Youtube-test
 ============
-This test is a simple C based YouTube test for actively measuring the quality of YouTube video download in your network. The test was designed to run on SamKnows probes for large scale active measurements from the user end. The test reports multiple metrics including stall events, start up delay, throughput etc. and also the media servers that were used for fetching the video. 
+This test is a simple C based YouTube test for actively measuring the quality of YouTube video download in your network. The test was designed to run on SamKnows probes for large scale active measurements from the user end. It reports multiple metrics including stall events, start up delay, throughput etc. and also the media servers that were used for fetching the video. The test does not render or decode the video, only demuxes it to read timestamps of the frames to maintain a playout buffer and predict stalls and startup delay. 
 
 ## Compiling
 
-The Makefile downloads and compiles the required FFMPEG and libcurl libraries automatically. However, you may still need to install these additional libraries: yasm, libssl-dev, zlib1g-dev
+To download and compile, run the following commands from a linux shell (the code works on Mac as well)
 
+```shell
+$ git clone https://github.com/sabyahsan/Youtube-test.git
+$ cd Youtube-test
+$ make
+```
+
+
+
+
+The Makefile downloads and compiles the required FFMPEG and libcurl libraries automatically. However, you may still need to install these additional libraries: yasm, libssl-dev, zlib1g-dev. 
 
 ## Running the Test 
 
-The test runs with default paramaters in the absence of any arguments, so just to get started, run the vdo_client, and it should look something like this. Note that it takes a few minutes to complete. 
-
+Before running the test, set the LD_LIBRARY_PATH. From inside the Youtube-test folder, run the following commands: 
 
 ```shell
-$ ./vdo_client 
+$ LD_LIBRARY_PATH=$PWD/build/ffmpeg_install/lib/
+$ export LD_LIBRARY_PATH
+```
+
+The test runs with default paramaters in the absence of any arguments so to get started and make sure everything is working, you can run it with a YouTube video of your choice as shown below. Note that the download is throttled, so the test would run for almost the same duration as the duration of the video, in this case about 2 and a half minutes. 
+
+```shell
+$ ./vdo_client https://www.youtube.com/watch?v=j8cKdDkkIYY
 YOUTUBE.3;1498562299;OK;j8cKdDkkIYY;mp4dash;144507334;0;0;0;149983000;101025;0;VIDEO;136;49792158;25261454;507338;r4---sn-ovgq0oxu-5goe.googlevideo.com;2001:948:7:1::f;7205;276343;AUDIO;140;83050717;2385881;28728;r4---sn-ovgq0oxu-5goe.googlevideo.com;2001:948:7:1::f;7347;16263;8339;684731;5;600;
 ```
 
 
+### Arguments
+
+A list of arguments that can be provided to the test in addition to the URL are given below. 
+
+*	**[\<url\>]** => URL of the YouTube video
+*	**--verbose** => Print instantaneous metric values when downloading video
+*	**--range \<s\>** => The length of the playout buffer in seconds. Default value is 5, value of x must be greater than 5 
+*	**--onebitrate** => when used the client does not switch to lower bit rate when a stall occurs. Disabled by default.
+*	**--maxbitrate \<bps\>** => if specified, the client will not attempt to download qualities with a higher bit rate, default MAXINT
+*	**--mintime \<s\>** => if a test finishes before this time, it is considered a failure, default value is 0
+*	**--maxtime \<s\>** => maximum time for which the test should run, default value is MAXINT
+* **-4** => IPv4 only
+* **-6** => IPv6 only 
 
 ## License: 
 
