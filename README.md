@@ -1,8 +1,11 @@
 Youtube-test
 ============
-This test is a simple C based YouTube test for actively measuring the quality of YouTube video download in your network. The test was designed to run on SamKnows probes for large scale active measurements from the user end. It reports multiple metrics including stall events, start up delay, throughput etc. and also the media servers that were used for fetching the video. The test does not render or decode the video, only demuxes it to read timestamps of the frames to maintain a playout buffer and predict stalls and startup delay.
+This test is a simple C based YouTube test for actively measuring the quality of YouTube video download in your network. The test was designed to run on SamKnows probes for large scale active measurements from the user end. It reports multiple metrics including stall events, start up delay, throughput etc. and also the media servers that were used for fetching the audio and video streams. The test does not render or decode the media, only demuxes it to read timestamps of the frames to maintain a playout buffer and predict stalls and startup delay. A stall occurs when either the audio or video buffer is empty. The length of the buffer can be provided as an argument. 
 
-Refer to [test sequence diagram](./sequence.pdf) for the trigger points for different metric measurements. 
+For the trigger points for different metric measurements and general flow of the test refer to [test sequence diagram](./sequence.pdf) . For citation and further details: 
+
+[[1] Ahsan, S., Bajpai, V., Ott, J., & Schönwälder, J. (2015, March). Measuring YouTube from dual-stacked hosts. In International Conference on Passive and Active Network Measurement (pp. 249-261). Springer, Cham.](https://www.google.fi/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwiL2u32g-DUAhXrHJoKHeqDDqIQFggmMAA&url=https%3A%2F%2Fwww.netlab.tkk.fi%2F~jo%2Fpapers%2F2015-03-PAM-YouTube-Dualstacked.pdf&usg=AFQjCNGsT8Y_zLny22pXLaG5IzXXQFuQ4A)
+
 
 ## Compiling
 
