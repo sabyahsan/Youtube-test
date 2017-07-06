@@ -1,10 +1,28 @@
 Youtube-test
 ============
-This test is a simple C based YouTube test for actively measuring the quality of YouTube video download in your network. The test was designed to run on SamKnows probes for large scale active measurements from the user end. It reports multiple metrics including stall events, start up delay, throughput etc. and also the media servers that were used for fetching the audio and video streams. The test does not render or decode the media, only demuxes it to read timestamps of the frames to maintain a playout buffer and predict stalls and startup delay. A stall occurs when either the audio or video buffer is empty. The length of the buffer can be provided as an argument. 
 
-For the trigger points for different metric measurements and general flow of the test refer to [test sequence diagram](./sequence.pdf) . For citation and further details: 
+This test is a simple C based YouTube test for actively measuring the
+quality of YouTube video download in your network. The test was designed
+to run on SamKnows probes for large scale active measurements from the
+user end. It reports multiple metrics including stall events, start up
+delay, throughput etc. and also the media servers that were used for
+fetching the audio and video streams. The test does not render or decode
+the media, only demuxes it to read timestamps of the frames to maintain
+a playout buffer and predict stalls and startup delay. A stall occurs
+when either the audio or video buffer is empty. The length of the buffer
+can be provided as an argument. 
 
-[[1] Ahsan, S., Bajpai, V., Ott, J., & Schönwälder, J. (2015, March). Measuring YouTube from dual-stacked hosts. In International Conference on Passive and Active Network Measurement (pp. 249-261). Springer, Cham.](https://www.google.fi/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwiL2u32g-DUAhXrHJoKHeqDDqIQFggmMAA&url=https%3A%2F%2Fwww.netlab.tkk.fi%2F~jo%2Fpapers%2F2015-03-PAM-YouTube-Dualstacked.pdf&usg=AFQjCNGsT8Y_zLny22pXLaG5IzXXQFuQ4A)
+For the trigger points for different metric measurements and general
+flow of the test see:
+
+![](http://i.imgur.com/Gv0Jw3z.png)  
+
+For citation and further details: 
+
+[[1] Ahsan, S., Bajpai, V., Ott, J., & Schönwälder, J. (2015, March).
+Measuring YouTube from dual-stacked hosts. In International Conference
+on Passive and Active Network Measurement (pp. 249-261). Springer,
+Cham.](https://www.google.fi/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwiL2u32g-DUAhXrHJoKHeqDDqIQFggmMAA&url=https%3A%2F%2Fwww.netlab.tkk.fi%2F~jo%2Fpapers%2F2015-03-PAM-YouTube-Dualstacked.pdf&usg=AFQjCNGsT8Y_zLny22pXLaG5IzXXQFuQ4A)
 
 
 ## Compiling
@@ -93,6 +111,44 @@ When the test finishes, it prints a ; separated list of metrics. The values in o
 - Error code => Internal error code in case of failure. 
 
 
+## Releases
+
+There have been these major releases of the test:
+
+| Releases      | Dates         |
+| ------------- |:-------------:|
+| YOUTUBE.2     | 21/08/2014    |
+| YOUTUBE.3     | 10/12/2014    |
+| YOUTUBE.4     | 22/01/2015    |
+| YOUTUBE.5     | 05/09/2016    |
+
+YOUTUBE.3   
+
+- Introduce chunk downloading with chunk size 1 or 5(max)
+- Total download calculated as : (video size + audio size) / (total_test_time),  instead of (video download rate + audio download rate)
+- Added first connection time (after audio bitrate) to the report
+- Added start up delay (time between beginning of test and first media download + time to buffer first 2 sec of video) to the report
+- Intermediate report: 
+  - Add test start time
+  - Swap position of current time and test start time
+
+
+YOUTUBE.4  
+
+- Startup delay is updated as the time to fetch the youtube page plus time to buffer first 2 sec of video
+- Change download rate in bytes per microsecond to bytes per second. 
+- Add error message to the report
+- Add max bitrate available (before error code) to the report
+
+
+YOUTUBE.5  
+
+- Add video framerate, video code, audio codec,  video resolution, video quality, video quality descriptor (SD,HD,FHD or UHD), audio abr, video frame bitrate IQR to the report
+- Deprecated the total download rate from report
+- Chunk download size determined based on free buffer space instead of fixed 5 sec 
+- Reset curl download time and size whenever stall occurs
+- Calculate the curl download time from PRETRANSFER instead of STARTTRANSFER
+- Fix the bug where the libcurl stats (size and time) for the last chunk were added twice.
 
 ## License: 
 
