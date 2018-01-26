@@ -152,4 +152,4 @@ YOUTUBE.5
 
 ## License: 
 
-This code is distributed under GPL v. 3. 
+This code is distributed under MIT License. 
